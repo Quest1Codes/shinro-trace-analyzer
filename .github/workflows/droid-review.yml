@@ -1,0 +1,35 @@
+name: Droid Code Review
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened, ready_for_review]
+  issue_comment:
+    types: [created]
+
+permissions:
+  contents: read
+  pull-requests: write
+  issues: read
+  id-token: write
+
+jobs:
+  code-review:
+    if: |
+      (github.event_name == 'pull_request' && github.event.pull_request.draft == false) ||
+      (github.event_name == 'issue_comment' && contains(github.event.comment.body, '@droid'))
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Droid Review
+        uses: Factory-AI/droid-action@main
+        with:
+          automatic_review: true
+          review_depth: deep
+          review_model: claude-sonnet-4-5-20250929
+          include_suggestions: true
+          automatic_security_review: true
+          security_severity_threshold: medium
+          factory_api_key: ${{ secrets.FACTORY_API_KEY }}
