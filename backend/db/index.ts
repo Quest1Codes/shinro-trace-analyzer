@@ -245,7 +245,6 @@ db.run(`
     cluster_id  TEXT PRIMARY KEY,
     user_name   TEXT NOT NULL,
     endpoint    TEXT NOT NULL,
-    password    TEXT NOT NULL DEFAULT '',
     is_removed  INTEGER NOT NULL DEFAULT 0,
     last_login  DATETIME DEFAULT (datetime('now'))
   )
@@ -253,30 +252,30 @@ db.run(`
 
 // Migration for existing schemas
 try { db.run(`ALTER TABLE connections ADD COLUMN is_removed INTEGER NOT NULL DEFAULT 0`); } catch { /* exists */ }
+try { db.run(`ALTER TABLE connections DROP COLUMN password`); } catch { /* already gone or unsupported */ }
 
 const stmtUpsertConnection = db.prepare(`
-  INSERT INTO connections (cluster_id, user_name, endpoint, password, is_removed)
-  VALUES (?, ?, ?, ?, 0)
+  INSERT INTO connections (cluster_id, user_name, endpoint, is_removed)
+  VALUES (?, ?, ?, 0)
   ON CONFLICT(cluster_id) DO UPDATE SET
     user_name = excluded.user_name,
     endpoint = excluded.endpoint,
-    password = excluded.password,
     is_removed = 0,
     last_login = datetime('now')
 `);
 
 const stmtListConnections = db.prepare(`
-  SELECT cluster_id, user_name, endpoint, password, is_removed, last_login
+  SELECT cluster_id, user_name, endpoint, is_removed, last_login
   FROM connections WHERE is_removed = 0 ORDER BY last_login DESC
 `);
 
 const stmtListAllConnections = db.prepare(`
-  SELECT cluster_id, user_name, endpoint, password, is_removed, last_login
+  SELECT cluster_id, user_name, endpoint, is_removed, last_login
   FROM connections ORDER BY last_login DESC
 `);
 
 const stmtGetConnection = db.prepare(`
-  SELECT cluster_id, user_name, endpoint, password, is_removed, last_login
+  SELECT cluster_id, user_name, endpoint, is_removed, last_login
   FROM connections WHERE cluster_id = ?
 `);
 
@@ -294,7 +293,6 @@ export interface ConnectionRecord {
   cluster_id: string;
   user_name: string;
   endpoint: string;
-  password: string;
   is_removed: boolean;
   last_login: string;
 }
@@ -310,15 +308,14 @@ export interface ConnectionSummary {
 // ── Connection CRUD ───────────────────────────────────────
 
 /**
- * Save a connection in plaintext.
+ * Save a connection (password is stored separately in the macOS Keychain).
  */
 export function saveConnection(
   cluster_id: string,
   user_name: string,
   endpoint: string,
-  password: string,
 ): void {
-  stmtUpsertConnection.run(cluster_id, user_name, endpoint, password);
+  stmtUpsertConnection.run(cluster_id, user_name, endpoint);
 }
 
 /**
@@ -359,7 +356,6 @@ export function getConnection(cluster_id: string): ConnectionRecord | null {
     cluster_id: row.cluster_id,
     user_name: row.user_name,
     endpoint: row.endpoint,
-    password: row.password,
     is_removed: !!row.is_removed,
     last_login: row.last_login,
   };
