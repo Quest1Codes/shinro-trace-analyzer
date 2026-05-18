@@ -10,7 +10,9 @@ import {
   getTracePath,
   getQueryLogPath,
   getViewLogPath,
+  getParserData,
 } from "../helpers/fs";
+import { TraceParser } from "../parser/parser";
 
 // Cached cluster name — resolved once per process, reused for all tool calls
 let cachedClusterName: string | null | undefined; // undefined = not resolved yet
@@ -289,7 +291,10 @@ function createServer() {
             content: [
               {
                 type: "text" as const,
-                text: JSON.stringify({ queries: [], message: "No queries have been analyzed yet." }),
+                text: JSON.stringify({
+                  queries: [],
+                  message: "No queries have been analyzed yet.",
+                }),
               },
             ],
           };
@@ -311,7 +316,9 @@ function createServer() {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({ error: err.message ?? "Failed to list queries." }),
+              text: JSON.stringify({
+                error: err.message ?? "Failed to list queries.",
+              }),
             },
           ],
         };
@@ -344,36 +351,31 @@ function createServer() {
     "Get a concise summary of the given query including SQL text, duration, rows read/written, memory usage, and materialized views triggered.",
     queryIdParam,
     async ({ query_id }) => {
-      const qlPath = getQueryLogPath(query_id);
-      if (!qlPath) return noQueryMsg(query_id);
+      const parserData = getParserData(query_id);
+      const parser = new TraceParser(
+        parserData.trace,
+        parserData.queryLog,
+        parserData.viewLog,
+      );
 
-      const ql = await readJson(qlPath);
-      const finish = queryFinishRow(ql);
-      if (!finish) return noQueryMsg(query_id);
-
-      // Count MVs
-      const vlPath = getViewLogPath(query_id);
-      const vl = vlPath ? await readJson(vlPath) : { data: [] };
-      const viewRows = vl.data ?? [];
-      const mvNames = [
-        ...new Set(viewRows.map((r: any) => r.view_name ?? "")),
-      ].sort();
+      const metadata = parser.getMetadata();
+      const mvInfo = parser.getMaterializedViewStats();
 
       const summary = {
-        query: finish.formatted_query || finish.query || "",
-        query_id: finish.initial_query_id || finish.query_id || "",
-        query_type: finish.query_kind ?? "",
-        database: finish.current_database ?? "",
-        duration_ms: finish.query_duration_ms ?? 0,
-        read_rows: finish.read_rows ?? 0,
-        read_bytes: formatBytes(finish.read_bytes ?? 0),
-        written_rows: finish.written_rows ?? 0,
-        written_bytes: formatBytes(finish.written_bytes ?? 0),
-        result_rows: finish.result_rows ?? 0,
-        peak_memory_usage: formatBytes(finish.memory_usage ?? 0),
-        timestamp: finish.event_time ?? "",
-        materialized_views_triggered: mvNames.length,
-        materialized_view_names: mvNames,
+        query: metadata.response?.query,
+        query_id: metadata.response?.queryId,
+        query_type: metadata.response?.queryType,
+        database: metadata.response?.currentDatabase,
+        duration_ms: metadata.response?.executionTimeMs,
+        read_rows: metadata.response?.rowsRead,
+        read_bytes: metadata.response?.bytesRead,
+        written_rows: metadata.response?.rowsWritten,
+        written_bytes: metadata.response?.bytesWritten,
+        result_rows: metadata.response?.resultRows,
+        peak_memory_usage: metadata.response?.memoryUsage,
+        final_timestamp: metadata.response?.finalTimestamp,
+        materialized_views_triggered: mvInfo.response?.length,
+        materialized_view_names: mvInfo.response?.map((mv) => mv.mvName),
       };
 
       return {
@@ -391,11 +393,16 @@ function createServer() {
     "Get materialized view execution stats for the given query — view name, target table, rows read/written, duration, peak memory, status.",
     queryIdParam,
     async ({ query_id }) => {
-      const vlPath = getViewLogPath(query_id);
-      const vl = vlPath ? await readJson(vlPath) : { data: [] };
-      const viewRows = vl.data ?? [];
+      const parserData = getParserData(query_id);
+      const parser = new TraceParser(
+        parserData.trace,
+        parserData.queryLog,
+        parserData.viewLog,
+      );
 
-      if (viewRows.length === 0) {
+      const mvInfo = parser.getMaterializedViewStats();
+
+      if (mvInfo.response?.length === 0) {
         return {
           content: [
             {
@@ -408,19 +415,12 @@ function createServer() {
         };
       }
 
-      const result = viewRows.map((r: any) => ({
-        view_name: r.view_name ?? "",
-        target_table: r.view_target ?? "",
-        read_rows: r.read_rows ?? 0,
-        written_rows: r.written_rows ?? 0,
-        duration_ms: r.view_duration_ms ?? 0,
-        peak_memory: formatBytes(r.peak_memory_usage ?? 0),
-        status: r.status ?? "",
-      }));
-
       return {
         content: [
-          { type: "text" as const, text: JSON.stringify(result, null, 2) },
+          {
+            type: "text" as const,
+            text: JSON.stringify(mvInfo.response, null, 2),
+          },
         ],
       };
     },
@@ -440,9 +440,7 @@ function createServer() {
       if ((ql.data ?? []).length === 0) return noQueryMsg(query_id);
 
       return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(ql, null, 2) },
-        ],
+        content: [{ type: "text" as const, text: JSON.stringify(ql, null, 2) }],
       };
     },
   );
@@ -457,9 +455,7 @@ function createServer() {
       const vlPath = getViewLogPath(query_id);
       const vl = vlPath ? await readJson(vlPath) : { data: [] };
       return {
-        content: [
-          { type: "text" as const, text: JSON.stringify(vl, null, 2) },
-        ],
+        content: [{ type: "text" as const, text: JSON.stringify(vl, null, 2) }],
       };
     },
   );
@@ -477,9 +473,7 @@ function createServer() {
         content: [
           {
             type: "text" as const,
-            text:
-              text ||
-              `No trace logs available for query_id '${query_id}'.`,
+            text: text || `No trace logs available for query_id '${query_id}'.`,
           },
         ],
       };
@@ -635,7 +629,7 @@ function createServer() {
       query: z
         .string()
         .describe(
-          'SQL SELECT query targeting system tables. Example: "SELECT database, table, partition, rows FROM system.parts WHERE active AND database = \'fintech\' ORDER BY rows DESC"',
+          "SQL SELECT query targeting system tables. Example: \"SELECT database, table, partition, rows FROM system.parts WHERE active AND database = 'fintech' ORDER BY rows DESC\"",
         ),
     },
     async ({ query }) => {
@@ -646,7 +640,9 @@ function createServer() {
           content: [
             {
               type: "text" as const,
-              text: JSON.stringify({ error: "Only SELECT queries are allowed." }),
+              text: JSON.stringify({
+                error: "Only SELECT queries are allowed.",
+              }),
             },
           ],
         };

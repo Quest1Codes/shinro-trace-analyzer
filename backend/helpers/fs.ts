@@ -1,5 +1,6 @@
 import os from "os";
 import fs from "fs";
+import { BLANK_JSON_DATA } from "../../tests/helpers/queries";
 
 export const LOG_DIR = os.homedir() + "/.shinro/logs";
 
@@ -45,4 +46,25 @@ export const getTablesPath = (
 ): string | null => {
   const logDir = getLogDirectory(query_id, ensure);
   return logDir ? `${logDir}/tables.json` : null;
+};
+
+export const getParserData = (queryId: string) => {
+  const tracePath = getTracePath(queryId);
+  const queryLogPath = getQueryLogPath(queryId);
+  const viewLogPath = getViewLogPath(queryId);
+
+  const trace =
+    tracePath && fs.existsSync(tracePath)
+      ? fs.readFileSync(tracePath, "utf-8")
+      : "";
+  const queryLog =
+    queryLogPath && fs.existsSync(queryLogPath)
+      ? fs.readFileSync(queryLogPath, "utf-8")
+      : BLANK_JSON_DATA;
+  const viewLog =
+    viewLogPath && fs.existsSync(viewLogPath)
+      ? fs.readFileSync(viewLogPath, "utf-8")
+      : BLANK_JSON_DATA;
+
+  return { trace, queryLog, viewLog };
 };
