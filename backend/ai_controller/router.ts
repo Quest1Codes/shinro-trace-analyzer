@@ -77,19 +77,23 @@ router.post("/keys", async (req: any, res: any) => {
     return res.status(400).json({ error: "Invalid provider" });
   }
 
-  const current = await loadKeys();
-  if (deleteKey) {
-    delete current[provider as LLMProvider];
-  } else {
-    const existing = current[provider as LLMProvider];
-    current[provider as LLMProvider] = {
-      key: key || existing?.key || "",
-      model: model || existing?.model || "",
-    };
-  }
-  await saveKeys(current);
+  try {
+    const current = await loadKeys();
+    if (deleteKey) {
+      delete current[provider as LLMProvider];
+    } else {
+      const existing = current[provider as LLMProvider];
+      current[provider as LLMProvider] = {
+        key: key || existing?.key || "",
+        model: model || existing?.model || "",
+      };
+    }
+    await saveKeys(current);
 
-  return res.json({ success: true });
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message ?? "Failed to save key" });
+  }
 });
 
 // ─── Chat (SSE Streaming) ────────────────────────────────

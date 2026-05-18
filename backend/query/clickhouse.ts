@@ -1,16 +1,8 @@
 import { spawn, exec as execCb, execFile as execFileCb } from "child_process";
 import { createClient, type ClickHouseClient } from "@clickhouse/client";
-import { readFile, writeFile, unlink } from "fs/promises";
+import { writeFile } from "fs/promises";
 import { promisify } from "util";
 import dns from "dns/promises";
-import os from "os";
-import {
-  isKeychainAvailable,
-  keychainGetFirst,
-  keychainSet,
-  keychainDeleteByAccount,
-  keychainListExtended,
-} from "./keychain";
 import { TraceParser } from "../parser/parser";
 import {
   getQueryLogPath,
@@ -18,29 +10,22 @@ import {
   getTracePath,
   getViewLogPath,
 } from "../helpers/fs";
+import { KeychainHandler, Credential } from "../keychain/keychain_handler";
 
 export { clickhouseRouter } from "./router";
 
 const exec = promisify(execCb);
 const execFile = promisify(execFileCb);
 
-const SHINRO_DIR = `${os.homedir()}/.shinro`;
-const CREDENTIALS_PATH = `${SHINRO_DIR}/credentials.json`;
 const EXEC_TIMEOUT = 120_000;
-
-// macOS Keychain identifier
-const KEYCHAIN_SERVICE = "shinro";
 const BINARY_CHECK_TIMEOUT = 10_000;
-
 const BLANK_JSON_DATA = '{"data":[]}';
 
-interface Credentials {
-  url: string;
-  user: string;
-  password: string;
-  port?: string;
-  secure: boolean;
-}
+const kc = new KeychainHandler<Credential[]>(
+  "shinro",
+  "credentials",
+  "Shinro",
+);
 
 const HTTP_TO_NATIVE_PORT: Record<string, { port: string; secure: boolean }> = {
   "8443": { port: "9440", secure: true },
@@ -48,132 +33,66 @@ const HTTP_TO_NATIVE_PORT: Record<string, { port: string; secure: boolean }> = {
 };
 
 let binaryPath: string | undefined;
-let credentials: Credentials | undefined;
+let credentials: Credential | undefined;
 
-/**
- * Build the Keychain account string: "user@url"
- * e.g. "default@https://w6cqi8ox60.ap-south-1.aws.clickhouse.cloud:8443"
- */
-function buildKeychainAccount(creds: Credentials): string {
-  return `${creds.user}@${creds.url}`;
+function accountKey(c: Credential): string {
+  return `${c.user}@${c.url}`;
 }
 
-/**
- * Parse a Keychain account string ("user@url") back into Credentials fields.
- * Splits on the first "@" so usernames without "@" and URLs with "@" are safe.
- */
-function parseKeychainAccount(account: string, password: string): Credentials {
-  const atIndex = account.indexOf("@");
-  const user = atIndex >= 0 ? account.substring(0, atIndex) : "default";
-  const url = atIndex >= 0 ? account.substring(atIndex + 1) : account;
-
-  let port: string | undefined;
-  let secure = false;
-  try {
-    const parsed = new URL(url);
-    port = parsed.port || undefined;
-    secure = parsed.protocol === "https:";
-  } catch {
-    // If URL parsing fails, use defaults
-  }
-
-  return { url, user, password, port, secure };
-}
-
-export async function loadCredentials(): Promise<Credentials | undefined> {
-  if (!isKeychainAvailable()) {
+function assertKeychain(): void {
+  if (!KeychainHandler.isAvailable()) {
     throw new Error(
       "macOS Keychain is required. Plaintext credential storage is not supported.",
     );
   }
-
-  // 1. Try macOS Keychain — load the first saved entry
-  const entry = await keychainGetFirst(KEYCHAIN_SERVICE);
-  if (entry) {
-    credentials = parseKeychainAccount(entry.account, entry.password);
-    return credentials;
-  }
-
-  // 2. One-time migration: if a legacy plaintext file exists, move it into
-  //    the Keychain and delete the file so it never sits on disk again.
-  try {
-    const raw = await readFile(CREDENTIALS_PATH, "utf-8");
-    const parsed = JSON.parse(raw) as Credentials;
-
-    await keychainSet(
-      KEYCHAIN_SERVICE,
-      buildKeychainAccount(parsed),
-      parsed.password,
-    );
-    await unlink(CREDENTIALS_PATH).catch(() => {});
-
-    credentials = parsed;
-    return credentials;
-  } catch {
-    return undefined;
-  }
 }
 
-/**
- * Load ALL saved credentials from the Keychain.
- * Returns a full array with passwords resolved for each entry.
- */
-export async function loadAllCredentials(): Promise<Credentials[]> {
-  if (!isKeychainAvailable()) return [];
-
-  const entries = await keychainListExtended(KEYCHAIN_SERVICE);
-  return entries.map((e) => parseKeychainAccount(e.account, e.password));
+async function readAll(): Promise<Credential[]> {
+  return (await kc.read()) ?? [];
 }
 
-export function getCredentials() {
+async function invalidateClient(): Promise<void> {
+  if (chClient) {
+    await chClient.close().catch(() => {});
+    chClient = null;
+  }
+  cachedClusterName = undefined;
+}
+
+export async function loadCredentials(): Promise<Credential | undefined> {
+  assertKeychain();
+  credentials = (await readAll())[0];
   return credentials;
 }
 
-export async function setCredentials(creds: Credentials) {
-  if (!isKeychainAvailable()) {
-    throw new Error(
-      "macOS Keychain is required. Credentials will not be written to a plaintext file.",
-    );
-  }
+export async function loadAllCredentials(): Promise<Credential[]> {
+  if (!KeychainHandler.isAvailable()) return [];
+  return readAll();
+}
 
+export function getCredentials(): Credential | undefined {
+  return credentials;
+}
+
+export async function setCredentials(creds: Credential): Promise<void> {
+  assertKeychain();
   credentials = creds;
 
-  // Store in Keychain: account = "user@url", password = raw password
-  await keychainSet(
-    KEYCHAIN_SERVICE,
-    buildKeychainAccount(creds),
-    creds.password,
-  );
+  const all = await readAll();
+  const i = all.findIndex((c) => accountKey(c) === accountKey(creds));
+  if (i >= 0) all[i] = creds;
+  else all.push(creds);
+  await kc.write(all);
 
-  // Invalidate the singleton so the next call gets a fresh client
-  // with the updated credentials
-  if (chClient) {
-    await chClient.close().catch(() => {});
-    chClient = null;
-  }
-  cachedClusterName = undefined;
+  await invalidateClient();
 }
 
 export async function deleteCredentials(): Promise<void> {
-  // Delete the currently active credential from the Keychain
-  if (isKeychainAvailable() && credentials) {
-    await keychainDeleteByAccount(
-      KEYCHAIN_SERVICE,
-      buildKeychainAccount(credentials),
-    );
+  if (KeychainHandler.isAvailable() && credentials) {
+    await removeByAccount(accountKey(credentials));
   }
-
   credentials = undefined;
-
-  // Also remove legacy file if it still exists
-  await unlink(CREDENTIALS_PATH).catch(() => {});
-
-  // Invalidate the singleton client
-  if (chClient) {
-    await chClient.close().catch(() => {});
-    chClient = null;
-  }
-  cachedClusterName = undefined;
+  await invalidateClient();
 }
 
 /**
@@ -182,19 +101,21 @@ export async function deleteCredentials(): Promise<void> {
 export async function deleteCredentialByAccount(
   account: string,
 ): Promise<void> {
-  if (!isKeychainAvailable()) return;
+  if (!KeychainHandler.isAvailable()) return;
 
-  await keychainDeleteByAccount(KEYCHAIN_SERVICE, account);
+  await removeByAccount(account);
 
-  // If the deleted credential was the active one, clear state
-  if (credentials && buildKeychainAccount(credentials) === account) {
+  if (credentials && accountKey(credentials) === account) {
     credentials = undefined;
-    if (chClient) {
-      await chClient.close().catch(() => {});
-      chClient = null;
-    }
-    cachedClusterName = undefined;
+    await invalidateClient();
   }
+}
+
+async function removeByAccount(account: string): Promise<void> {
+  const all = await readAll();
+  const next = all.filter((c) => accountKey(c) !== account);
+  if (next.length === 0) await kc.clear();
+  else if (next.length !== all.length) await kc.write(next);
 }
 
 export function getBinaryPath() {
