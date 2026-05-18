@@ -19,6 +19,8 @@ interface StoredBlob<T> {
 }
 
 export class KeychainHandler<T> {
+  private cache: { value: T | undefined } | undefined;
+
   constructor(
     private readonly service: string,
     private readonly account: string,
@@ -30,9 +32,12 @@ export class KeychainHandler<T> {
   }
 
   async read(): Promise<T | undefined> {
+    if (this.cache) return this.cache.value;
+
     console.log(
       `Reading from keychain: service=${this.service}, account=${this.account}`,
     );
+    let value: T | undefined;
     try {
       const { stdout } = await execFile(SECURITY_BIN, [
         "find-generic-password",
@@ -43,10 +48,13 @@ export class KeychainHandler<T> {
         "-w",
       ]);
       const blob = JSON.parse(stdout.trim()) as StoredBlob<T>;
-      return blob.data;
+      value = blob.data;
     } catch {
-      return undefined;
+      value = undefined;
     }
+
+    this.cache = { value };
+    return value;
   }
 
   async write(data: T): Promise<void> {
@@ -66,6 +74,7 @@ export class KeychainHandler<T> {
       "-w",
       JSON.stringify(blob),
     ]);
+    this.cache = { value: data };
   }
 
   async clear(): Promise<void> {
@@ -80,5 +89,10 @@ export class KeychainHandler<T> {
     } catch {
       /* not present – fine */
     }
+    this.cache = { value: undefined };
+  }
+
+  invalidateCache(): void {
+    this.cache = undefined;
   }
 }
