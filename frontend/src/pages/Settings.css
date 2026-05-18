@@ -102,6 +102,10 @@
   gap: 28px;
 }
 
+.settings-content-modal {
+  gap: 0;
+}
+
 .settings-tabs {
   display: flex;
   flex-direction: column;
@@ -139,6 +143,11 @@
   min-width: 0;
 }
 
+.settings-panel-modal {
+  max-width: none;
+  width: 100%;
+}
+
 .ai-keys-panel, .connections-panel {
   padding: 0;
 }
@@ -159,6 +168,26 @@
   letter-spacing: 0.3px;
   color: var(--text-primary);
   margin: 0 0 2px;
+}
+
+.settings-panel-close {
+  width: 30px;
+  height: 30px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  cursor: pointer;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  flex-shrink: 0;
+}
+
+.settings-panel-close:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
 }
 
 .security-notice {
@@ -355,10 +384,10 @@
 }
 
 .model-select {
-  padding: 6px 10px;
+  padding: 9px;
   background: var(--bg-input);
   border: 1px solid var(--border-color);
-  border-radius: var(--radius-sm);
+  border-radius: var(--radius-md);
   color: var(--text-primary);
   font-family: var(--font-mono);
   font-size: 12px;

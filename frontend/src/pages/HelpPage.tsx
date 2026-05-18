@@ -14,9 +14,8 @@ export default function HelpPage() {
         <div className="help-video-wrap">
           <iframe
             className="help-video-frame"
-            src="https://www.youtube-nocookie.com/embed/EkqxxysG9_M?si=UVrEiXXhs7mFX6Cu"
+            src="https://www.youtube-nocookie.com/embed/gk4DKxoTR28?si=u4HEGR9xve61AXqG"
             title="Shinro ClickHouse Query Trace Analyzer Demo"
-            frameBorder="0"
             allow="accelerometer; autoplay; clipboard-write; encrypted-media; gyroscope; picture-in-picture; web-share"
             referrerPolicy="strict-origin-when-cross-origin"
             allowFullScreen

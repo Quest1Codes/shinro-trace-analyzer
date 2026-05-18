@@ -76,6 +76,8 @@ export default function Sidebar() {
   const [pendingDelete, setPendingDelete] = useState<PendingDelete>(null);
   const [deleteError, setDeleteError] = useState<string | null>(null);
   const runningStates: ReadonlyArray<string> = ['executing', 'fetching_logs', 'parsing'];
+  const isSettingsConfigModal =
+    settingsModal === 'ai-keys' || settingsModal === 'connections';
   const isActiveRunning = (id: string) =>
     id === activeQueryId && runningStates.includes(executionState);
 
@@ -266,13 +268,18 @@ export default function Sidebar() {
       {settingsModal && (
         <div className="settings-modal-overlay" onClick={() => openSettingsModal(null)}>
           <div className="settings-modal-content" onClick={(e) => e.stopPropagation()}>
-            <button className="settings-modal-close" onClick={() => openSettingsModal(null)}>
-              <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
-                <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
-              </svg>
-            </button>
+            {!isSettingsConfigModal && (
+              <button
+                className="settings-modal-close"
+                onClick={() => openSettingsModal(null)}
+              >
+                <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                  <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round"/>
+                </svg>
+              </button>
+            )}
             {(settingsModal === 'ai-keys' || settingsModal === 'connections') && (
-              <Settings initialTab={settingsModal} hideTabs />
+              <Settings initialTab={settingsModal} hideTabs onClose={() => openSettingsModal(null)} />
             )}
             {settingsModal === 'skills' && <SkillsPage />}
             {settingsModal === 'help' && <HelpPage />}

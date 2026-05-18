@@ -16,9 +16,10 @@ const OPENROUTER_MODELS = ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'google
 interface SettingsProps {
   initialTab?: 'connections' | 'ai-keys';
   hideTabs?: boolean;
+  onClose?: () => void;
 }
 
-export default function Settings({ initialTab, hideTabs }: SettingsProps = {}) {
+export default function Settings({ initialTab, hideTabs, onClose }: SettingsProps = {}) {
   const [activeTab, setActiveTab] = useState<'connections' | 'ai-keys'>(initialTab || 'ai-keys');
   const { connections, addConnection, deleteConnection, refreshConnections } = useConnection();
 
@@ -185,7 +186,7 @@ export default function Settings({ initialTab, hideTabs }: SettingsProps = {}) {
 
   return (
     <div className="settings-page">
-      <div className="settings-content">
+      <div className={`settings-content ${hideTabs ? 'settings-content-modal' : ''}`}>
         {!hideTabs && (
           <div className="settings-tabs">
             <button
@@ -203,7 +204,7 @@ export default function Settings({ initialTab, hideTabs }: SettingsProps = {}) {
           </div>
         )}
 
-        <div className="settings-panel">
+        <div className={`settings-panel ${hideTabs ? 'settings-panel-modal' : ''}`}>
           {activeTab === 'ai-keys' && (
             <div className="ai-keys-panel">
               <div className="panel-header">
@@ -211,6 +212,13 @@ export default function Settings({ initialTab, hideTabs }: SettingsProps = {}) {
                   <h2 className="panel-title">AI Keys Panel</h2>
                   <span className="label-muted">AI Provider Keys</span>
                 </div>
+                {onClose && (
+                  <button className="settings-panel-close" onClick={onClose} aria-label="Close panel">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               <div className="security-notice">
@@ -218,7 +226,7 @@ export default function Settings({ initialTab, hideTabs }: SettingsProps = {}) {
                   <rect x="3" y="8" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
                   <path d="M6 8V5.5a3 3 0 0 1 6 0V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
-                <p>Keys are encrypted and stored locally in <code>~/.shinro/keys.json</code>.</p>
+                <p>Keys are encrypted and stored locally in <code>macOS keychain</code>.</p>
               </div>
 
 
@@ -380,6 +388,13 @@ export default function Settings({ initialTab, hideTabs }: SettingsProps = {}) {
                   <h2 className="panel-title">Database Connections</h2>
                   <span className="label-muted">Manage ClickHouse cluster endpoints</span>
                 </div>
+                {onClose && (
+                  <button className="settings-panel-close" onClick={onClose} aria-label="Close panel">
+                    <svg width="16" height="16" viewBox="0 0 16 16" fill="none">
+                      <path d="M4 4l8 8M12 4l-8 8" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" />
+                    </svg>
+                  </button>
+                )}
               </div>
 
               <div className="settings-section">
