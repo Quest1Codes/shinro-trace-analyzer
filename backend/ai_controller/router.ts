@@ -2,7 +2,7 @@ import express from "express";
 import type { LLMProvider } from "./keys";
 import { isConnected, getTools, connectToMCP } from "./mcp_client";
 import { streamChat } from "./llm";
-import { loadKeys, saveKeys, getProviderConfig } from "./keyManager";
+import { aiKeys } from "./keyManager";
 import {
   saveQueryTrace,
   getQueryTrace,
@@ -58,7 +58,7 @@ router.post("/mcp/connect", async (req: any, res: any) => {
 // ─── AI Keys Management ───────────────────────────────────
 
 router.get("/keys", async (_req: any, res: any) => {
-  const keys = await loadKeys();
+  const keys = (await aiKeys.read()) ?? {};
   const status = {
     openai: !!keys.openai?.key,
     anthropic: !!keys.anthropic?.key,
@@ -77,19 +77,27 @@ router.post("/keys", async (req: any, res: any) => {
     return res.status(400).json({ error: "Invalid provider" });
   }
 
-  const current = await loadKeys();
-  if (deleteKey) {
-    delete current[provider as LLMProvider];
-  } else {
-    const existing = current[provider as LLMProvider];
-    current[provider as LLMProvider] = {
-      key: key || existing?.key || "",
-      model: model || existing?.model || "",
-    };
-  }
-  await saveKeys(current);
+  try {
+    const current = (await aiKeys.read()) ?? {};
+    if (deleteKey) {
+      delete current[provider as LLMProvider];
+    } else {
+      const existing = current[provider as LLMProvider];
+      current[provider as LLMProvider] = {
+        key: key || existing?.key || "",
+        model: model || existing?.model || "",
+      };
+    }
+    if (Object.keys(current).length === 0) {
+      await aiKeys.clear();
+    } else {
+      await aiKeys.write(current);
+    }
 
-  return res.json({ success: true });
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res.status(500).json({ error: err?.message ?? "Failed to save key" });
+  }
 });
 
 // ─── Chat (SSE Streaming) ────────────────────────────────
@@ -103,7 +111,8 @@ router.post("/chat", async (req: any, res: any) => {
       .json({ error: "messages, provider, and model are required" });
   }
 
-  const config = await getProviderConfig(provider as LLMProvider);
+  const keys = (await aiKeys.read()) ?? {};
+  const config = keys[provider as LLMProvider];
   if (!config || !config.key) {
     return res.status(401).json({
       error: `API key for ${provider} is not configured on the backend.`,
@@ -186,7 +195,8 @@ router.post("/trace-meta", async (req: any, res: any) => {
       .json({ error: "query_text, provider, and model are required" });
   }
 
-  const config = await getProviderConfig(provider as LLMProvider);
+  const traceMetaKeys = (await aiKeys.read()) ?? {};
+  const config = traceMetaKeys[provider as LLMProvider];
   if (!config || !config.key) {
     return res
       .status(401)

@@ -82,7 +82,7 @@ const binaryName = `shinro-analyzer-${platform}-${arch}`;
 
 console.log("Compiling executable...");
 execSync(
-  `bun build --compile ${path.join(root, "index.ts")} --outfile ${path.join(root, binaryName)}`,
+  `bun build --minify --compile --sourcemap ${path.join(root, "index.ts")} --outfile ${path.join(root, binaryName)}`,
   { stdio: "inherit" },
 );
 console.log(`Executable built -> ./${binaryName}`);
