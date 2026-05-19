@@ -29,7 +29,7 @@ export class KeychainHandler<T> {
 
   async read(): Promise<T | undefined> {
     if (this.cache) {
-      return this.cache;
+      return structuredClone(this.cache); // clone to prevent external mutation
     }
 
     let value: T | undefined;
@@ -72,7 +72,7 @@ export class KeychainHandler<T> {
       JSON.stringify(blob),
     ]);
 
-    this.cache = data;
+    this.cache = structuredClone(data); // clone to prevent external mutations
   }
 
   async clear(): Promise<void> {
