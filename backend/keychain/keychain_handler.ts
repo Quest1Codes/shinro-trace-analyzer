@@ -5,35 +5,35 @@ import os from "os";
 const execFile = promisify(execFileCb);
 const SECURITY_BIN = "/usr/bin/security";
 
-export interface Credential {
-  url: string;
-  user: string;
-  password: string;
-  port?: string;
-  secure: boolean;
-}
-
-interface StoredBlob<T> {
+export interface StoredKeychainBlob<T> {
   version: 1;
   data: T;
 }
 
 export class KeychainHandler<T> {
-  private cache: { value: T | undefined } | undefined;
+  private readonly service;
+  private readonly account;
+  private readonly label;
 
-  constructor(
-    private readonly service: string,
-    private readonly account: string,
-    private readonly label: string,
-  ) {}
+  private cache: T | null = null;
+
+  constructor(service: string, account: string, label: string) {
+    this.service = service;
+    this.account = account;
+    this.label = label;
+  }
 
   static isAvailable(): boolean {
     return os.platform() === "darwin";
   }
 
   async read(): Promise<T | undefined> {
-    if (this.cache) return this.cache.value;
+    if (this.cache) {
+      return this.cache;
+    }
+
     let value: T | undefined;
+
     try {
       const { stdout } = await execFile(SECURITY_BIN, [
         "find-generic-password",
@@ -43,18 +43,20 @@ export class KeychainHandler<T> {
         this.account,
         "-w",
       ]);
-      const blob = JSON.parse(stdout.trim()) as StoredBlob<T>;
+
+      const blob = JSON.parse(stdout.trim()) as StoredKeychainBlob<T>;
+
       value = blob.data;
     } catch {
+      // todo: log error when logger is implemented
       value = undefined;
     }
 
-    this.cache = { value };
+    this.cache = value ?? null;
     return value;
   }
-
   async write(data: T): Promise<void> {
-    const blob: StoredBlob<T> = { version: 1, data };
+    const blob: StoredKeychainBlob<T> = { version: 1, data };
     await execFile(SECURITY_BIN, [
       "add-generic-password",
       "-U",
@@ -69,7 +71,8 @@ export class KeychainHandler<T> {
       "-w",
       JSON.stringify(blob),
     ]);
-    this.cache = { value: data };
+
+    this.cache = data;
   }
 
   async clear(): Promise<void> {
@@ -84,10 +87,10 @@ export class KeychainHandler<T> {
     } catch {
       /* not present – fine */
     }
-    this.cache = { value: undefined };
+    this.cache = null;
   }
 
   invalidateCache(): void {
-    this.cache = undefined;
+    this.cache = null;
   }
 }
