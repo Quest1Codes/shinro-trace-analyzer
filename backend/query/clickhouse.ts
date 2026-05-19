@@ -21,13 +21,8 @@ const execFile = promisify(execFileCb);
 
 const EXEC_TIMEOUT = 120_000;
 const BINARY_CHECK_TIMEOUT = 10_000;
-const BLANK_JSON_DATA = '{"data":[]}';
 
-const kc = new KeychainHandler<Credential[]>(
-  "shinro",
-  "credentials",
-  "Shinro",
-);
+const kc = new KeychainHandler<Credential[]>("shinro", "credentials", "Shinro");
 
 const HTTP_TO_NATIVE_PORT: Record<string, { port: string; secure: boolean }> = {
   "8443": { port: "9440", secure: true },
