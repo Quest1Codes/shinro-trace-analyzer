@@ -1,6 +1,6 @@
 import OpenAI from "openai";
 import Anthropic from "@anthropic-ai/sdk";
-import type { LLMProvider } from "./keys";
+import type { LLMProvider } from "../keychain/ai_credential";
 import {
   toolsToOpenAIFunctions,
   toolsToAnthropicTools,
@@ -10,7 +10,6 @@ import {
 import { DEFAULT_PORT } from "../../constants";
 
 import { getSystemPrompt } from "./system_prompt";
-
 
 interface ChatMessage {
   role: "user" | "assistant" | "system";
@@ -41,11 +40,37 @@ export async function* streamChat(
   const hasTools = getTools().length > 0;
 
   if (provider === "openai") {
-    yield* streamOpenAI(apiKey, model, messages, hasTools, query_id, undefined, skill_ids, cluster_id);
+    yield* streamOpenAI(
+      apiKey,
+      model,
+      messages,
+      hasTools,
+      query_id,
+      undefined,
+      skill_ids,
+      cluster_id,
+    );
   } else if (provider === "anthropic") {
-    yield* streamAnthropic(apiKey, model, messages, hasTools, query_id, skill_ids, cluster_id);
+    yield* streamAnthropic(
+      apiKey,
+      model,
+      messages,
+      hasTools,
+      query_id,
+      skill_ids,
+      cluster_id,
+    );
   } else if (provider === "openrouter") {
-    yield* streamOpenAI(apiKey, model, messages, hasTools, query_id, "https://openrouter.ai/api/v1", skill_ids, cluster_id);
+    yield* streamOpenAI(
+      apiKey,
+      model,
+      messages,
+      hasTools,
+      query_id,
+      "https://openrouter.ai/api/v1",
+      skill_ids,
+      cluster_id,
+    );
   } else {
     yield { type: "error", content: `Unknown provider: ${provider}` };
   }
@@ -68,17 +93,20 @@ async function* streamOpenAI(
     ...(baseURL ? { baseURL } : {}),
     ...(baseURL?.includes("openrouter")
       ? {
-        defaultHeaders: {
-          "HTTP-Referer": `http://localhost:${process.env.PORT || DEFAULT_PORT}`,
-          "X-OpenRouter-Title": "Shinro AI",
-          "Authorization": `Bearer ${apiKey}`,
-        },
-      }
+          defaultHeaders: {
+            "HTTP-Referer": `http://localhost:${process.env.PORT || DEFAULT_PORT}`,
+            "X-OpenRouter-Title": "Shinro AI",
+            Authorization: `Bearer ${apiKey}`,
+          },
+        }
       : {}),
   });
 
   const openaiMessages: OpenAI.Chat.Completions.ChatCompletionMessageParam[] = [
-    { role: "system", content: await getSystemPrompt(query_id, skill_ids, cluster_id) },
+    {
+      role: "system",
+      content: await getSystemPrompt(query_id, skill_ids, cluster_id),
+    },
     ...messages.map((m) => ({
       role: m.role as "user" | "assistant",
       content: m.content,
