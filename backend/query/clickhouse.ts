@@ -19,6 +19,8 @@ import {
   getViewLogPath,
 } from "../helpers/fs";
 
+import { BLANK_JSON_DATA } from "../helpers/stubs";
+
 export { clickhouseRouter } from "./router";
 
 const exec = promisify(execCb);
@@ -31,8 +33,6 @@ const EXEC_TIMEOUT = 120_000;
 // macOS Keychain identifier
 const KEYCHAIN_SERVICE = "shinro";
 const BINARY_CHECK_TIMEOUT = 10_000;
-
-const BLANK_JSON_DATA = '{"data":[]}';
 
 interface Credentials {
   url: string;

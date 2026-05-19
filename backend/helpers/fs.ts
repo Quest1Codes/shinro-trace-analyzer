@@ -1,6 +1,6 @@
 import os from "os";
 import fs from "fs";
-import { BLANK_JSON_DATA } from "../../tests/helpers/queries";
+import { BLANK_JSON_DATA } from "./stubs";
 
 export const LOG_DIR = os.homedir() + "/.shinro/logs";
 
