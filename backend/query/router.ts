@@ -29,6 +29,8 @@ import {
 const router = express.Router();
 var queriesList: Array<string> = [];
 
+const REDACTED_PASSWORD = "********";
+
 async function updateQueriesList() {
   if (!fs.existsSync(LOG_DIR)) {
     fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -65,7 +67,10 @@ router.post("/update-clickhouse-path", async (req: any, res: any) => {
 });
 
 router.get("/credentials", async (_req: any, res: any) => {
-  const active = clickhouseKeychain.getActiveCredential();
+  let active = clickhouseKeychain.getActiveCredential();
+  if (active) {
+    active.password = REDACTED_PASSWORD;
+  }
   const all = await clickhouseKeychain.getAllCredentialsRedacted();
 
   return res.json({
