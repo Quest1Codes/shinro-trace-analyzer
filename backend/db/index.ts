@@ -29,11 +29,6 @@ db.run(`
   )
 `);
 
-// Add columns if upgrading from older schema
-try { db.run(`ALTER TABLE query_traces ADD COLUMN cluster_id TEXT`); } catch { /* exists */ }
-try { db.run(`ALTER TABLE query_traces ADD COLUMN suggestions TEXT`); } catch { /* exists */ }
-try { db.run(`ALTER TABLE query_traces ADD COLUMN query_text TEXT`); } catch { /* exists */ }
-
 db.run(`
   CREATE TABLE IF NOT EXISTS messages (
     id              INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -249,10 +244,6 @@ db.run(`
     last_login  DATETIME DEFAULT (datetime('now'))
   )
 `);
-
-// Migration for existing schemas
-try { db.run(`ALTER TABLE connections ADD COLUMN is_removed INTEGER NOT NULL DEFAULT 0`); } catch { /* exists */ }
-try { db.run(`ALTER TABLE connections DROP COLUMN password`); } catch { /* already gone or unsupported */ }
 
 const stmtUpsertConnection = db.prepare(`
   INSERT INTO connections (cluster_id, user_name, endpoint, is_removed)
