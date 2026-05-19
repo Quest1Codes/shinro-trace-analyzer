@@ -48,6 +48,11 @@ export const getTablesPath = (
   return logDir ? `${logDir}/tables.json` : null;
 };
 
+export interface ParserData {
+  trace: string;
+  queryLog: string;
+  viewLog: string;
+}
 export const getParserData = (queryId: string) => {
   const tracePath = getTracePath(queryId);
   const queryLogPath = getQueryLogPath(queryId);
@@ -66,5 +71,5 @@ export const getParserData = (queryId: string) => {
       ? fs.readFileSync(viewLogPath, "utf-8")
       : BLANK_JSON_DATA;
 
-  return { trace, queryLog, viewLog };
+  return { trace, queryLog, viewLog } as ParserData;
 };

@@ -1,23 +1,31 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { z } from "zod";
-import { readFile, readdir } from "fs/promises";
+import { readdir } from "fs/promises";
 import { existsSync } from "fs";
 import type { Request, Response } from "express";
 import { getCHClient, checkClusterPresence } from "../query/clickhouse";
-import {
-  LOG_DIR,
-  getTracePath,
-  getQueryLogPath,
-  getViewLogPath,
-  getParserData,
-} from "../helpers/fs";
+import { LOG_DIR, ParserData, getParserData } from "../helpers/fs";
 import { TraceParser } from "../parser/parser";
 
 import SYSTEM_TABLE_DESCRIPTIONS from "./system_table_descriptions.json" with { type: "json" };
 
 // Cached cluster name — resolved once per process, reused for all tool calls
 let cachedClusterName: string | null | undefined; // undefined = not resolved yet
+
+let parserDataCache = new Map<string, ParserData>();
+
+function getCachedParserData(
+  queryId: string,
+  bypassCache: boolean = false,
+): ParserData {
+  if (!bypassCache && parserDataCache.has(queryId)) {
+    return parserDataCache.get(queryId)!;
+  }
+  const data = getParserData(queryId);
+  parserDataCache.set(queryId, data);
+  return data;
+}
 
 async function getClusterName(): Promise<string | null> {
   if (cachedClusterName !== undefined) return cachedClusterName;
@@ -31,25 +39,6 @@ async function getClusterName(): Promise<string | null> {
 }
 
 // ─── Helpers ─────────────────────────────────────────────
-
-async function readJson(filePath: string): Promise<{ data: any[] }> {
-  if (!existsSync(filePath)) return { data: [] };
-  try {
-    const data = await readFile(filePath, "utf-8");
-    return JSON.parse(data);
-  } catch {
-    return { data: [] };
-  }
-}
-
-async function readText(filePath: string): Promise<string> {
-  if (!existsSync(filePath)) return "";
-  try {
-    return await readFile(filePath, "utf-8");
-  } catch {
-    return "";
-  }
-}
 
 function noQueryMsg(query_id: string): {
   content: { type: "text"; text: string }[];
@@ -73,6 +62,10 @@ const queryIdParam = {
     .describe(
       "The ClickHouse query_id of the run to analyze. Use list_queries to discover available IDs.",
     ),
+  bypass_cache: z
+    .boolean()
+    .default(false)
+    .describe("Whether to bypass the cache and fetch fresh data."),
 };
 
 // ─── MCP Server ──────────────────────────────────────────
@@ -155,8 +148,8 @@ function createServer() {
     "get_query_summary",
     "Get a concise summary of the given query including SQL text, duration, rows read/written, memory usage, and materialized views triggered.",
     queryIdParam,
-    async ({ query_id }) => {
-      const parserData = getParserData(query_id);
+    async ({ query_id, bypass_cache }) => {
+      const parserData = getCachedParserData(query_id, bypass_cache);
       const parser = new TraceParser(
         parserData.trace,
         parserData.queryLog,
@@ -197,8 +190,8 @@ function createServer() {
     "get_mv_summary",
     "Get materialized view execution stats for the given query — view name, target table, rows read/written, duration, peak memory, status.",
     queryIdParam,
-    async ({ query_id }) => {
-      const parserData = getParserData(query_id);
+    async ({ query_id, bypass_cache }) => {
+      const parserData = getCachedParserData(query_id, bypass_cache);
       const parser = new TraceParser(
         parserData.trace,
         parserData.queryLog,
@@ -237,11 +230,9 @@ function createServer() {
     "get_query_log",
     "Get the FULL raw system.query_log JSON for the given query. WARNING: Very large. Prefer get_query_summary.",
     queryIdParam,
-    async ({ query_id }) => {
-      const qlPath = getQueryLogPath(query_id);
-      if (!qlPath) return noQueryMsg(query_id);
-
-      const ql = await readJson(qlPath);
+    async ({ query_id, bypass_cache }) => {
+      const parserData = getCachedParserData(query_id, bypass_cache);
+      const ql = parserData.queryLog ? JSON.parse(parserData.queryLog) : null;
       if ((ql.data ?? []).length === 0) return noQueryMsg(query_id);
 
       return {
@@ -256,9 +247,11 @@ function createServer() {
     "get_query_view_log",
     "Get the FULL raw system.query_views_log JSON for the given query. WARNING: Very large. Prefer get_mv_summary.",
     queryIdParam,
-    async ({ query_id }) => {
-      const vlPath = getViewLogPath(query_id);
-      const vl = vlPath ? await readJson(vlPath) : { data: [] };
+    async ({ query_id, bypass_cache }) => {
+      const parserData = getCachedParserData(query_id, bypass_cache);
+      const vl = parserData.viewLog
+        ? JSON.parse(parserData.viewLog)
+        : { data: [] };
       return {
         content: [{ type: "text" as const, text: JSON.stringify(vl, null, 2) }],
       };
@@ -271,9 +264,9 @@ function createServer() {
     "get_raw_trace_logs",
     "Get raw trace logs (clickhouse-client stderr) for the given query. WARNING: Very large. Use search_trace_logs instead.",
     queryIdParam,
-    async ({ query_id }) => {
-      const tracePath = getTracePath(query_id);
-      const text = tracePath ? await readText(tracePath) : "";
+    async ({ query_id, bypass_cache }) => {
+      const parserData = getCachedParserData(query_id, bypass_cache);
+      const text = parserData.trace;
       return {
         content: [
           {
@@ -307,9 +300,15 @@ function createServer() {
         .optional()
         .describe("Max matching lines to return (default: 100)"),
     },
-    async ({ query_id, pattern, case_sensitive, max_results }) => {
-      const tracePath = getTracePath(query_id);
-      const content = tracePath ? await readText(tracePath) : "";
+    async ({
+      query_id,
+      pattern,
+      case_sensitive,
+      max_results,
+      bypass_cache,
+    }) => {
+      const parserData = getCachedParserData(query_id, bypass_cache);
+      const content = parserData.trace;
       if (!content) {
         return {
           content: [
