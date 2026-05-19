@@ -260,7 +260,7 @@ Rules for 'suggestions':
           { role: "user", content: userMessage },
         ],
         temperature: 0.3,
-        max_tokens: 512,
+        max_completion_tokens: 512,
       });
       responseText = response.choices[0]?.message?.content || "";
     } else if (provider === "anthropic") {

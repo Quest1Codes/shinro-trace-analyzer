@@ -364,8 +364,8 @@ export function TraceProvider({ children }: { children: React.ReactNode }) {
         let provider = '';
         let model = '';
         if (keyStatus.openrouter) { provider = 'openrouter'; model = keyStatus.openrouterModel || 'anthropic/claude-sonnet-4'; }
-        else if (keyStatus.openai) { provider = 'openai'; model = keyStatus.openaiModel || 'gpt-4o-mini'; }
-        else if (keyStatus.anthropic) { provider = 'anthropic'; model = keyStatus.anthropicModel || 'claude-haiku-4-20250514'; }
+        else if (keyStatus.openai) { provider = 'openai'; model = keyStatus.openaiModel || 'gpt-5.4-mini'; }
+        else if (keyStatus.anthropic) { provider = 'anthropic'; model = keyStatus.anthropicModel || 'claude-haiku-4-5-20251001'; }
 
         if (provider && model) {
           const meta = await fetchTraceMeta(query, provider, model);

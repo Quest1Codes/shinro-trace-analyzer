@@ -213,6 +213,7 @@ async function* streamAnthropic(
     let currentToolName = "";
     let currentToolInput = "";
     let hasToolUse = false;
+    const toolUseBlocks: Anthropic.ToolUseBlockParam[] = [];
     const toolResults: Anthropic.ToolResultBlockParam[] = [];
 
     for await (const event of stream) {
@@ -243,6 +244,12 @@ async function* streamAnthropic(
 
       if (event.type === "content_block_stop" && currentToolName) {
         const args = JSON.parse(currentToolInput || "{}");
+        toolUseBlocks.push({
+          type: "tool_use",
+          id: currentToolUseId,
+          name: currentToolName,
+          input: args,
+        });
         yield { type: "tool_call", toolName: currentToolName, toolArgs: args };
 
         try {
@@ -281,12 +288,12 @@ async function* streamAnthropic(
       return;
     }
 
-    // Feed tool results back
+    // Feed tool results back — assistant message must include the tool_use blocks
     const assistantContent: Anthropic.ContentBlockParam[] = [];
     if (fullContent) {
       assistantContent.push({ type: "text", text: fullContent });
     }
-    // We need to add the tool_use blocks
+    assistantContent.push(...toolUseBlocks);
     anthropicMessages.push({ role: "assistant", content: assistantContent });
     anthropicMessages.push({ role: "user", content: toolResults });
   }
