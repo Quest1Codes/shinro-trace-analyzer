@@ -9,9 +9,9 @@ import {
 import { useConnection } from '../context/ConnectionContext';
 import './Settings.css';
 
-const OPENAI_MODELS = ['gpt-4o', 'gpt-4o-mini', 'gpt-4.1', 'gpt-4.1-mini', 'o4-mini'];
-const ANTHROPIC_MODELS = ['claude-sonnet-4-20250514', 'claude-opus-4-20250514', 'claude-haiku-4-20250514'];
-const OPENROUTER_MODELS = ['anthropic/claude-sonnet-4', 'openai/gpt-4o', 'google/gemini-2.5-flash-preview', 'google/gemini-2.5-pro-preview', 'deepseek/deepseek-r1', 'meta-llama/llama-4-maverick'];
+const OPENAI_MODELS = ['gpt-5.5', 'gpt-5.4', 'gpt-5.4-mini', 'gpt-4.1', 'gpt-4.1-mini'];
+const ANTHROPIC_MODELS = ['claude-sonnet-4-6', 'claude-opus-4-7', 'claude-haiku-4-5-20251001'];
+const OPENROUTER_MODELS = ['anthropic/claude-sonnet-4.6','anthropic/claude-opus-4.7','anthropic/claude-haiku-4.5','openai/gpt-5.5', 'openai/gpt-5.5-pro', 'openai/gpt-5.4', 'openai/gpt-5.4-pro', 'openai/gpt-5.3-codex', 'openai/gpt-5.2', 'openai/gpt-5.2-pro', 'openai/gpt-5.2-codex'];
 
 interface SettingsProps {
   initialTab?: 'connections' | 'ai-keys';
