@@ -1,6 +1,8 @@
 import { spawn, exec as execCb, execFile as execFileCb } from "child_process";
 import { createClient, type ClickHouseClient } from "@clickhouse/client";
 import { writeFile } from "fs/promises";
+import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+import { homedir } from "os";
 import { promisify } from "util";
 import dns from "dns/promises";
 import { TraceParser } from "../parser/parser";
@@ -28,6 +30,23 @@ const HTTP_TO_NATIVE_PORT: Record<string, { port: string; secure: boolean }> = {
   "8443": { port: "9440", secure: true },
   "8123": { port: "9000", secure: false },
 };
+
+const CONFIG_PATH = homedir() + "/.shinro/config.json";
+
+function readBinaryConfig(): string | undefined {
+  try {
+    if (!existsSync(CONFIG_PATH)) return undefined;
+    const data = JSON.parse(readFileSync(CONFIG_PATH, "utf-8"));
+    return typeof data.binaryPath === "string" ? data.binaryPath : undefined;
+  } catch {
+    return undefined;
+  }
+}
+
+function writeBinaryConfig(path: string): void {
+  mkdirSync(homedir() + "/.shinro", { recursive: true });
+  writeFileSync(CONFIG_PATH, JSON.stringify({ binaryPath: path }, null, 2));
+}
 
 let binaryPath: string | undefined;
 let credentials: Credential | undefined;
@@ -133,6 +152,12 @@ async function validateBinary(path: string): Promise<boolean> {
 export async function findBinary(): Promise<string | undefined> {
   if (binaryPath && (await validateBinary(binaryPath))) return binaryPath;
 
+  const saved = readBinaryConfig();
+  if (saved && (await validateBinary(saved))) {
+    binaryPath = saved;
+    return saved;
+  }
+
   try {
     const { stdout } = await exec("which clickhouse", { timeout: 5_000 });
     const path = stdout.trim();
@@ -150,6 +175,7 @@ export async function setBinaryPath(path: string): Promise<void> {
     throw new Error(`Invalid clickhouse binary at: ${path}`);
   }
   binaryPath = path;
+  writeBinaryConfig(path);
 }
 
 async function resolveHostname(hostname: string): Promise<string> {
