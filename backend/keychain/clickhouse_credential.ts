@@ -35,6 +35,14 @@ export class ClickhouseCredentialManager {
     return this.activeCredential;
   }
 
+  getActiveCredentialRedacted(): CHCredential | null {
+    const clonedCredential = structuredClone(this.activeCredential)
+    if (clonedCredential) {
+      clonedCredential.password = REDACTED_PASSWORD
+    }
+    return clonedCredential
+  }
+
   async getAllCredentialsRedacted(): Promise<CHCredential[]> {
     let creds = await this.keychainHandler.read();
     return (creds || []).map((c) => ({ ...c, password: REDACTED_PASSWORD }));

@@ -65,7 +65,7 @@ router.post("/update-clickhouse-path", async (req: any, res: any) => {
 });
 
 router.get("/credentials", async (_req: any, res: any) => {
-  const active = clickhouseKeychain.getActiveCredential();
+  const active = clickhouseKeychain.getActiveCredentialRedacted();
   const all = await clickhouseKeychain.getAllCredentialsRedacted();
 
   return res.json({
