@@ -4,7 +4,8 @@ import {
   getMcpStatus, 
   connectMcp, 
   getAIKeyStatus, 
-  saveProviderKeyConfig 
+  saveProviderKeyConfig,
+  deleteProviderKeyConfig,
 } from '../services/aiService';
 import { useConnection } from '../context/ConnectionContext';
 import './Settings.css';
@@ -127,13 +128,13 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
     setSaving(true);
     setSaveResult(null);
     try {
-      if (openaiKey.trim() || openaiModel !== keyStatus.openaiModel) {
+      if (openaiKey.trim() || (keyStatus.openai && openaiModel !== keyStatus.openaiModel)) {
         await saveProviderKeyConfig('openai', openaiKey.trim(), openaiModel);
       }
-      if (anthropicKey.trim() || anthropicModel !== keyStatus.anthropicModel) {
+      if (anthropicKey.trim() || (keyStatus.anthropic && anthropicModel !== keyStatus.anthropicModel)) {
         await saveProviderKeyConfig('anthropic', anthropicKey.trim(), anthropicModel);
       }
-      if (openrouterKey.trim() || openrouterModel !== keyStatus.openrouterModel) {
+      if (openrouterKey.trim() || (keyStatus.openrouter && openrouterModel !== keyStatus.openrouterModel)) {
         await saveProviderKeyConfig('openrouter', openrouterKey.trim(), openrouterModel);
       }
 
@@ -150,7 +151,7 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
 
   async function handleDelete(provider: 'openai' | 'anthropic' | 'openrouter') {
     try {
-      await saveProviderKeyConfig(provider, '', '', true);
+      await deleteProviderKeyConfig(provider);
       if (provider === 'openai') {
         setOpenaiKey('');
         if (keyStatus.openaiModel) setOpenaiModel(keyStatus.openaiModel);

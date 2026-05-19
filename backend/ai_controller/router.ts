@@ -1,8 +1,6 @@
 import express from "express";
-import type { LLMProvider } from "./keys";
 import { isConnected, getTools, connectToMCP } from "./mcp_client";
 import { streamChat } from "./llm";
-import { aiKeys } from "./keyManager";
 import {
   saveQueryTrace,
   getQueryTrace,
@@ -16,6 +14,13 @@ import {
   updateTraceSuggestions,
   updateTraceQueryText,
 } from "../db/index";
+
+import {
+  aiKeychain,
+  LLM_PROVIDERS,
+  type AICredential,
+  type LLMProvider,
+} from "../keychain/ai_credential";
 
 const router = express.Router();
 
@@ -58,45 +63,58 @@ router.post("/mcp/connect", async (req: any, res: any) => {
 // ─── AI Keys Management ───────────────────────────────────
 
 router.get("/keys", async (_req: any, res: any) => {
-  const keys = (await aiKeys.read()) ?? {};
-  const status = {
-    openai: !!keys.openai?.key,
-    anthropic: !!keys.anthropic?.key,
-    openrouter: !!keys.openrouter?.key,
-    openaiModel: keys.openai?.model,
-    anthropicModel: keys.anthropic?.model,
-    openrouterModel: keys.openrouter?.model,
-  };
-  return res.json(status);
+  const keys = (await aiKeychain.getAllCredentials()).map((obj) => {
+    return {
+      provider: obj.provider,
+      model: obj.model || "",
+      hasKey: !!obj.apiKey,
+    };
+  });
+  return res.json(keys);
 });
 
 router.post("/keys", async (req: any, res: any) => {
-  const { provider, key, model, deleteKey } = req.body;
+  const { provider, apiKey, model } = req.body;
 
-  if (!provider || !["openai", "anthropic", "openrouter"].includes(provider)) {
+  if (!provider || !LLM_PROVIDERS.includes(provider)) {
+    return res.status(400).json({ error: "Invalid provider" });
+  }
+  if (!apiKey || typeof apiKey !== "string") {
+    return res.status(400).json({ error: "apiKey is required" });
+  }
+
+  const credential: AICredential = {
+    provider: provider as LLMProvider,
+    apiKey,
+    model: typeof model === "string" && model ? model : undefined,
+  };
+
+  try {
+    await aiKeychain.upsertCredential(credential);
+    return res.json({ success: true });
+  } catch (err: any) {
+    return res
+      .status(500)
+      .json({ error: err?.message ?? "Failed to save key" });
+  }
+});
+
+router.delete("/keys", async (req: any, res: any) => {
+  const { provider } = req.body ?? {};
+
+  if (!provider || !LLM_PROVIDERS.includes(provider)) {
     return res.status(400).json({ error: "Invalid provider" });
   }
 
   try {
-    const current = (await aiKeys.read()) ?? {};
-    if (deleteKey) {
-      delete current[provider as LLMProvider];
-    } else {
-      const existing = current[provider as LLMProvider];
-      current[provider as LLMProvider] = {
-        key: key || existing?.key || "",
-        model: model || existing?.model || "",
-      };
+    const existing = await aiKeychain.getCredentialFor(provider as LLMProvider);
+    if (!existing) {
+      return res.status(404).json({ error: "AI credential not found." });
     }
-    if (Object.keys(current).length === 0) {
-      await aiKeys.clear();
-    } else {
-      await aiKeys.write(current);
-    }
-
-    return res.json({ success: true });
+    await aiKeychain.deleteCredential(provider as LLMProvider);
+    return res.json({ success: true, message: "AI credential removed." });
   } catch (err: any) {
-    return res.status(500).json({ error: err?.message ?? "Failed to save key" });
+    return res.status(500).json({ error: err.message });
   }
 });
 
@@ -111,16 +129,15 @@ router.post("/chat", async (req: any, res: any) => {
       .json({ error: "messages, provider, and model are required" });
   }
 
-  const keys = (await aiKeys.read()) ?? {};
-  const config = keys[provider as LLMProvider];
-  if (!config || !config.key) {
+  if (!LLM_PROVIDERS.includes(provider)) {
+    return res.status(400).json({ error: "Invalid provider" });
+  }
+
+  const cred = await aiKeychain.getCredentialFor(provider);
+  if (!cred?.apiKey) {
     return res.status(401).json({
       error: `API key for ${provider} is not configured on the backend.`,
     });
-  }
-
-  if (!["openai", "anthropic", "openrouter"].includes(provider)) {
-    return res.status(400).json({ error: "Invalid provider" });
   }
 
   // Try to connect to MCP if not already connected
@@ -151,8 +168,8 @@ router.post("/chat", async (req: any, res: any) => {
     }
 
     const events = streamChat(
-      provider as LLMProvider,
-      config.key,
+      cred.provider,
+      cred.apiKey,
       model,
       messages,
       query_id,
@@ -195,9 +212,12 @@ router.post("/trace-meta", async (req: any, res: any) => {
       .json({ error: "query_text, provider, and model are required" });
   }
 
-  const traceMetaKeys = (await aiKeys.read()) ?? {};
-  const config = traceMetaKeys[provider as LLMProvider];
-  if (!config || !config.key) {
+  if (!LLM_PROVIDERS.includes(provider)) {
+    return res.status(400).json({ error: "Invalid provider" });
+  }
+
+  const cred = await aiKeychain.getCredentialFor(provider);
+  if (!cred?.apiKey) {
     return res
       .status(401)
       .json({ error: `API key for ${provider} is not configured.` });
@@ -249,7 +269,7 @@ Rules for 'suggestions':
             }
           : {};
       const openai = new OpenAI({
-        apiKey: config.key,
+        apiKey: cred.apiKey,
         ...(baseURL ? { baseURL } : {}),
         defaultHeaders: headers,
       });
@@ -265,7 +285,7 @@ Rules for 'suggestions':
       responseText = response.choices[0]?.message?.content || "";
     } else if (provider === "anthropic") {
       const { default: Anthropic } = await import("@anthropic-ai/sdk");
-      const anthropic = new Anthropic({ apiKey: config.key });
+      const anthropic = new Anthropic({ apiKey: cred.apiKey });
       const response = await anthropic.messages.create({
         model,
         max_tokens: 512,

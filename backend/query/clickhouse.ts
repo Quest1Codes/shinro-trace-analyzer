@@ -12,7 +12,10 @@ import {
   getTracePath,
   getViewLogPath,
 } from "../helpers/fs";
-import { KeychainHandler, Credential } from "../keychain/keychain_handler";
+
+import type { CHCredential } from "../keychain/clickhouse_credential";
+
+import { clickhouseKeychain } from "../keychain/clickhouse_credential";
 
 import { BLANK_JSON_DATA } from "../helpers/stubs";
 
@@ -23,8 +26,6 @@ const execFile = promisify(execFileCb);
 
 const EXEC_TIMEOUT = 120_000;
 const BINARY_CHECK_TIMEOUT = 10_000;
-
-const kc = new KeychainHandler<Credential[]>("shinro", "credentials", "Shinro");
 
 const HTTP_TO_NATIVE_PORT: Record<string, { port: string; secure: boolean }> = {
   "8443": { port: "9440", secure: true },
@@ -49,90 +50,6 @@ function writeBinaryConfig(path: string): void {
 }
 
 let binaryPath: string | undefined;
-let credentials: Credential | undefined;
-
-function accountKey(c: Credential): string {
-  return `${c.user}@${c.url}`;
-}
-
-function assertKeychain(): void {
-  if (!KeychainHandler.isAvailable()) {
-    throw new Error(
-      "macOS Keychain is required. Plaintext credential storage is not supported.",
-    );
-  }
-}
-
-async function readAll(): Promise<Credential[]> {
-  return (await kc.read()) ?? [];
-}
-
-async function invalidateClient(): Promise<void> {
-  if (chClient) {
-    await chClient.close().catch(() => {});
-    chClient = null;
-  }
-  cachedClusterName = undefined;
-}
-
-export async function loadCredentials(): Promise<Credential | undefined> {
-  assertKeychain();
-  credentials = (await readAll())[0];
-  return credentials;
-}
-
-export async function loadAllCredentials(): Promise<Credential[]> {
-  if (!KeychainHandler.isAvailable()) return [];
-  return readAll();
-}
-
-export function getCredentials(): Credential | undefined {
-  return credentials;
-}
-
-export async function setCredentials(creds: Credential): Promise<void> {
-  assertKeychain();
-  credentials = creds;
-
-  const all = await readAll();
-  const i = all.findIndex((c) => accountKey(c) === accountKey(creds));
-  if (i >= 0) all[i] = creds;
-  else all.push(creds);
-  await kc.write(all);
-
-  await invalidateClient();
-}
-
-export async function deleteCredentials(): Promise<void> {
-  if (KeychainHandler.isAvailable() && credentials) {
-    await removeByAccount(accountKey(credentials));
-  }
-  credentials = undefined;
-  await invalidateClient();
-}
-
-/**
- * Delete a specific saved credential by its account string ("user@url").
- */
-export async function deleteCredentialByAccount(
-  account: string,
-): Promise<void> {
-  if (!KeychainHandler.isAvailable()) return;
-
-  await removeByAccount(account);
-
-  if (credentials && accountKey(credentials) === account) {
-    credentials = undefined;
-    await invalidateClient();
-  }
-}
-
-async function removeByAccount(account: string): Promise<void> {
-  const all = await readAll();
-  const next = all.filter((c) => accountKey(c) !== account);
-  if (next.length === 0) await kc.clear();
-  else if (next.length !== all.length) await kc.write(next);
-}
 
 export function getBinaryPath() {
   return binaryPath;
@@ -194,7 +111,7 @@ async function resolveHostname(hostname: string): Promise<string> {
 
 async function buildClientArgs(query: string): Promise<string[]> {
   const args = ["client"];
-
+  const credentials = clickhouseKeychain.getActiveCredential();
   if (credentials) {
     const parsed = new URL(credentials.url);
     const hostname = await resolveHostname(parsed.hostname);
@@ -283,7 +200,8 @@ export async function executeQuery(query: string): Promise<string> {
 
 // ─── Singleton ClickHouse JS client ─────────────────────
 // A single long-lived client is reused across all calls within the process.
-// It is invalidated whenever credentials change (see setCredentials above).
+// must invoke `invalidateCHClient()` whenever the active credential
+// changes so the next `getCHClient()` rebuilds with fresh credentials.
 
 let chClient: ClickHouseClient | null = null;
 
@@ -292,6 +210,7 @@ let chClient: ClickHouseClient | null = null;
 let cachedClusterName: string | null | undefined;
 
 export function getCHClient(): ClickHouseClient {
+  const credentials = clickhouseKeychain.getActiveCredential();
   if (!credentials) throw new Error("ClickHouse credentials not configured");
   if (!chClient) {
     chClient = createClient({
@@ -304,16 +223,34 @@ export function getCHClient(): ClickHouseClient {
   return chClient;
 }
 
+export async function invalidateCHClient(): Promise<void> {
+  if (chClient) {
+    await chClient.close().catch(() => {});
+    chClient = null;
+  }
+  cachedClusterName = undefined;
+}
+
 export async function testConnection(
   url?: string,
   user?: string,
   password?: string,
 ): Promise<void> {
-  const targetUrl = url ?? credentials?.url;
-  const targetUser = user ?? credentials?.user ?? "default";
-  const targetPass = password ?? credentials?.password ?? "";
+  let targetUrl: string;
+  let targetUser: string;
+  let targetPass: string;
 
-  if (!targetUrl) throw new Error("url is required");
+  if (url) {
+    targetUrl = url;
+    targetUser = user ?? "default";
+    targetPass = password ?? "";
+  } else {
+    const active = clickhouseKeychain.getActiveCredential();
+    if (!active) throw new Error("url is required");
+    targetUrl = active.url;
+    targetUser = user ?? active.user ?? "default";
+    targetPass = password ?? active.password ?? "";
+  }
 
   const testClient = createClient({
     url: targetUrl,

@@ -4,16 +4,16 @@ import {
   findBinary,
   setBinaryPath,
   getBinaryPath,
-  getCredentials,
-  setCredentials,
-  deleteCredentials,
-  deleteCredentialByAccount,
-  loadAllCredentials,
   executeQuery,
   querySystemTables,
   testConnection,
+  invalidateCHClient,
 } from "./clickhouse";
-import type { Credential } from "../keychain/keychain_handler";
+import {
+  clickhouseKeychain,
+  type CHCredential,
+} from "../keychain/clickhouse_credential";
+
 import { readdir, rm } from "fs/promises";
 import fs from "fs";
 import { getLogDirectory, LOG_DIR } from "../helpers/fs";
@@ -27,7 +27,6 @@ import {
 } from "../db/index";
 
 const router = express.Router();
-
 var queriesList: Array<string> = [];
 
 async function updateQueriesList() {
@@ -65,27 +64,14 @@ router.post("/update-clickhouse-path", async (req: any, res: any) => {
   }
 });
 
-const REDACTED_PASSWORD = '********'
 router.get("/credentials", async (_req: any, res: any) => {
-  const active = getCredentials();
-  const saved = await loadAllCredentials();
+  const active = clickhouseKeychain.getActiveCredentialRedacted();
+  const all = await clickhouseKeychain.getAllCredentialsRedacted();
 
   return res.json({
-    configured: !!active,
-    active: active
-      ? {
-          url: active.url,
-          user: active.user,
-          password: REDACTED_PASSWORD,
-          secure: active.secure,
-        }
-      : null,
-    saved: saved.map((c) => ({
-      url: c.url,
-      user: c.user,
-      password: REDACTED_PASSWORD,
-      secure: c.secure,
-    })),
+    configured: active != null,
+    active: active,
+    saved: all,
   });
 });
 
@@ -107,27 +93,39 @@ router.post("/credentials", async (req: any, res: any) => {
     return res.status(400).json({ error: "Invalid URL format" });
   }
 
-  await setCredentials({
+  const credential = {
     url,
     user: typeof user === "string" && user ? user : "default",
     password: typeof password === "string" ? password : "",
     port: typeof port === "string" ? port : parsed.port || undefined,
     secure: typeof secure === "boolean" ? secure : parsed.protocol === "https:",
-  });
+  } as CHCredential;
+
+  await clickhouseKeychain.upsertCredential(credential);
+  clickhouseKeychain.setActiveCredential(credential);
+  await invalidateCHClient(); // Force re-authentication on next query execution
 
   return res.json({ success: true });
 });
 
 router.delete("/credentials", async (req: any, res: any) => {
   try {
-    const { account } = req.body ?? {};
-    if (account && typeof account === "string") {
+    const { user, url } = req.body ?? {};
+    if (user && typeof user === "string" && url && typeof url === "string") {
       // Delete a specific saved credential
-      await deleteCredentialByAccount(account);
+      await clickhouseKeychain.deleteCredential(user, url);
     } else {
       // Delete the currently active credential
-      await deleteCredentials();
+      const active = clickhouseKeychain.getActiveCredential();
+      if (!active) {
+        return res
+          .status(404)
+          .json({ error: "No active credential to delete." });
+      }
+      await clickhouseKeychain.deleteCredential(active.user, active.url);
+      clickhouseKeychain.unsetActiveCredential();
     }
+    await invalidateCHClient(); // Force re-authentication on next query execution
     return res.json({ success: true, message: "Credential removed." });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -167,7 +165,7 @@ router.post("/execute-query", async (req: any, res: any) => {
 });
 
 router.get("/query-system-tables/:query_id", async (req: any, res: any) => {
-  if (!getCredentials()) {
+  if (!clickhouseKeychain.getActiveCredential()) {
     return res.status(400).json({
       error: "ClickHouse credentials not configured. Call /credentials first.",
     });
@@ -267,13 +265,15 @@ router.post("/connections", async (req: any, res: any) => {
     saveConnection(id, user, endpoint);
     // Persist credentials in the existing Keychain Credential[] store
     const parsed = new URL(endpoint);
-    await setCredentials({
+    const credential = {
       url: endpoint,
       user,
       password: pass,
       port: parsed.port || undefined,
       secure: parsed.protocol === "https:",
-    });
+    };
+    await clickhouseKeychain.upsertCredential(credential);
+    clickhouseKeychain.setActiveCredential(credential);
     return res.json({ success: true, cluster_id: id });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
@@ -288,9 +288,10 @@ router.delete("/connections/:cluster_id", async (req: any, res: any) => {
   try {
     const conn = getConnection(req.params.cluster_id);
     if (conn) {
-      await deleteCredentialByAccount(`${conn.user_name}@${conn.endpoint}`);
+      await clickhouseKeychain.deleteCredential(conn.user_name, conn.endpoint);
     }
     deleteConnection(req.params.cluster_id);
+    clickhouseKeychain.unsetActiveCredential();
     return res.json({ success: true });
   } catch (err: any) {
     return res.status(500).json({ error: err.message });
@@ -310,16 +311,18 @@ router.post("/connections/:cluster_id/activate", async (req: any, res: any) => {
   }
 
   try {
-    const allCreds = await loadAllCredentials();
-    const found = allCreds.find(
-      (c: Credential) => `${c.user}@${c.url}` === `${conn.user_name}@${conn.endpoint}`
+    const found = await clickhouseKeychain.getCredentialFor(
+      conn.user_name,
+      conn.endpoint,
     );
     if (!found) {
       return res.status(404).json({
-        error: "Credentials not found in keychain. Please re-add this connection.",
+        error:
+          "Credentials not found in keychain. Please re-add this connection.",
       });
     }
-    await setCredentials(found);
+    clickhouseKeychain.setActiveCredential(found);
+    await invalidateCHClient();
     touchConnection(conn.cluster_id);
     return res.json({
       success: true,
