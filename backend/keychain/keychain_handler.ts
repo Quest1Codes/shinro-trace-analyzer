@@ -33,10 +33,6 @@ export class KeychainHandler<T> {
 
   async read(): Promise<T | undefined> {
     if (this.cache) return this.cache.value;
-
-    console.log(
-      `Reading from keychain: service=${this.service}, account=${this.account}`,
-    );
     let value: T | undefined;
     try {
       const { stdout } = await execFile(SECURITY_BIN, [
@@ -58,7 +54,6 @@ export class KeychainHandler<T> {
   }
 
   async write(data: T): Promise<void> {
-    console.log("Writing to keychain: ", data);
     const blob: StoredBlob<T> = { version: 1, data };
     await execFile(SECURITY_BIN, [
       "add-generic-password",

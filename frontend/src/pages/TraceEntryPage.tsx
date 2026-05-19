@@ -65,7 +65,7 @@ export default function TraceEntryPage() {
   const { runTrace, currentQuery, setCurrentQuery, executionState, executionError } = useTrace();
   const { connectionInfo, connections, activeClusterId, selectConnection } = useConnection();
   const { theme } = useTheme();
-  const { setAppMode, setDashboardTab, setDashboardOpen, setSidebarCollapsed, setInitialPrompt, openSettingsModal } = useConversation();
+  const { setAppMode, setDashboardTab, setDashboardOpen, setSidebarCollapsed, setInitialPrompt, openSettingsModal, settingsModal } = useConversation();
 
   const [showKeyGuard, setShowKeyGuard] = useState(false);
   const [showSettings, setShowSettings] = useState(false);
@@ -95,6 +95,18 @@ export default function TraceEntryPage() {
       .then((d) => setBinaryFound(!!d.found))
       .catch(() => setBinaryFound(false));
   }, []);
+
+  const prevSettingsModalRef = useRef<typeof settingsModal>(settingsModal);
+  useEffect(() => {
+    const prev = prevSettingsModalRef.current;
+    prevSettingsModalRef.current = settingsModal;
+    if (prev === 'connections' && settingsModal === null) {
+      fetch('/api/query/find-clickhouse-binary')
+        .then((r) => r.json())
+        .then((d) => setBinaryFound(!!d.found))
+        .catch(() => setBinaryFound(false));
+    }
+  }, [settingsModal]);
 
 
   useEffect(() => {
