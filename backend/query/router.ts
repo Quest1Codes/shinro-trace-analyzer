@@ -13,6 +13,7 @@ import {
   querySystemTables,
   testConnection,
 } from "./clickhouse";
+import type { Credential } from "../keychain/keychain_handler";
 import { readdir, rm } from "fs/promises";
 import fs from "fs";
 import { getLogDirectory, LOG_DIR } from "../helpers/fs";
@@ -241,6 +242,7 @@ router.get("/connections/all", (_req: any, res: any) => {
 /**
  * POST /connections — Save a new connection.
  * Body: { cluster_id?, user_name, endpoint, password, skipTest? }
+ * Password is stored in the macOS Keychain.
  */
 router.post("/connections", async (req: any, res: any) => {
   const { cluster_id, user_name, endpoint, password, skipTest } = req.body;
@@ -256,11 +258,22 @@ router.post("/connections", async (req: any, res: any) => {
       .digest("hex")
       .slice(0, 16);
   try {
+    const user = user_name || "default";
+    const pass = password || "";
     // Test connection before saving (unless caller already validated)
     if (!skipTest) {
-      await testConnection(endpoint, user_name || "default", password || "");
+      await testConnection(endpoint, user, pass);
     }
-    saveConnection(id, user_name || "default", endpoint, password || "");
+    saveConnection(id, user, endpoint);
+    // Persist credentials in the existing Keychain Credential[] store
+    const parsed = new URL(endpoint);
+    await setCredentials({
+      url: endpoint,
+      user,
+      password: pass,
+      port: parsed.port || undefined,
+      secure: parsed.protocol === "https:",
+    });
     return res.json({ success: true, cluster_id: id });
   } catch (err: any) {
     return res.status(400).json({ error: err.message });
@@ -269,9 +282,14 @@ router.post("/connections", async (req: any, res: any) => {
 
 /**
  * DELETE /connections/:cluster_id — Remove a connection.
+ * Also removes the associated credential from the Keychain.
  */
-router.delete("/connections/:cluster_id", (req: any, res: any) => {
+router.delete("/connections/:cluster_id", async (req: any, res: any) => {
   try {
+    const conn = getConnection(req.params.cluster_id);
+    if (conn) {
+      await deleteCredentialByAccount(`${conn.user_name}@${conn.endpoint}`);
+    }
     deleteConnection(req.params.cluster_id);
     return res.json({ success: true });
   } catch (err: any) {
@@ -281,8 +299,6 @@ router.delete("/connections/:cluster_id", (req: any, res: any) => {
 
 /**
  * POST /connections/:cluster_id/activate — Set as the active connection.
- * Loads decrypted credentials from SQLite, injects them into the
- * clickhouse module's singleton, and updates last_login.
  */
 router.post("/connections/:cluster_id/activate", async (req: any, res: any) => {
   const conn = getConnection(req.params.cluster_id);
@@ -294,14 +310,16 @@ router.post("/connections/:cluster_id/activate", async (req: any, res: any) => {
   }
 
   try {
-    const parsed = new URL(conn.endpoint);
-    await setCredentials({
-      url: conn.endpoint,
-      user: conn.user_name,
-      password: conn.password,
-      port: parsed.port || undefined,
-      secure: parsed.protocol === "https:",
-    });
+    const allCreds = await loadAllCredentials();
+    const found = allCreds.find(
+      (c: Credential) => `${c.user}@${c.url}` === `${conn.user_name}@${conn.endpoint}`
+    );
+    if (!found) {
+      return res.status(404).json({
+        error: "Credentials not found in keychain. Please re-add this connection.",
+      });
+    }
+    await setCredentials(found);
     touchConnection(conn.cluster_id);
     return res.json({
       success: true,
