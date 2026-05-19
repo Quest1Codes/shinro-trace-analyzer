@@ -27,13 +27,19 @@ export async function connectMcp(serverUrl?: string): Promise<MCPStatus> {
   return res.json();
 }
 
+type AIKeyStatus = Record<LLMProvider, boolean> & { [K in LLMProvider as `${K}Model`]?: string }
 
-
-export async function getAIKeyStatus(): Promise<Record<LLMProvider, boolean> & { openaiModel?: string; anthropicModel?: string; openrouterModel?: string }> {
+export async function getAIKeyStatus(): Promise<AIKeyStatus> {
   try {
     const res = await fetch(`${API_BASE}/keys`);
     if (!res.ok) throw new Error();
-    return res.json();
+    const data = await res.json() as { provider: LLMProvider, model: string, hasKey: boolean }[];
+    const aiKeys: AIKeyStatus = { openai: false, anthropic: false, openrouter: false }
+    for (const entry of data) {
+      aiKeys[entry.provider] = entry.hasKey
+      aiKeys[`${entry.provider}Model`] = entry.model
+    }
+    return aiKeys
   } catch {
     return { openai: false, anthropic: false, openrouter: false };
   }
@@ -43,14 +49,22 @@ export async function saveProviderKeyConfig(
   provider: LLMProvider,
   key: string,
   model: string,
-  deleteKey?: boolean
 ): Promise<void> {
   const res = await fetch(`${API_BASE}/keys`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ provider, key, model, deleteKey }),
+    body: JSON.stringify({ provider, apiKey: key, model }),
   });
   if (!res.ok) throw new Error('Failed to save key');
+}
+
+export async function deleteProviderKeyConfig(provider: LLMProvider): Promise<void> {
+  const res = await fetch(`${API_BASE}/keys`, {
+    method: 'DELETE',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ provider }),
+  });
+  if (!res.ok) throw new Error('Failed to delete key');
 }
 
 
