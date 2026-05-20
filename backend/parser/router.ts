@@ -2,7 +2,7 @@ import express from "express";
 import { TraceParser } from "./parser";
 const router = express.Router();
 import { readFile } from "fs/promises";
-import { ParsedTraceResponse } from "./definitions";
+import type { ParsedTraceResponse } from "./definitions";
 
 import { getTracePath, getQueryLogPath, getViewLogPath } from "../helpers/fs";
 
