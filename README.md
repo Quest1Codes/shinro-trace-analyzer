@@ -4,6 +4,7 @@ Diagnose Clickhouse queries for bottlenecks and performance improvements. It aut
 
 Also supports more dynamic analysis and natural-language conversations with an LLM of your choice .
 
+Supported on macOS, with other platforms arriving soon.
 
 ## Requirements
 | Kind              | Supported                                                              |
@@ -15,8 +16,8 @@ Also supports more dynamic analysis and natural-language conversations with an L
 
 ## Quickstart
 
-- Download the tool from the Releases page (todo: add link)
-- Making the tool accessible can be done in two ways. You can either:
+- Download the tool from the [Releases page](https://github.com/Quest1Codes/shinro-trace-analyzer/releases)
+- Make the tool accessible - Can be done in two ways. You can either:
   1. Add execution permissions to the downloaded file.
       ```shell
       # Grant execute permission
@@ -25,9 +26,9 @@ Also supports more dynamic analysis and natural-language conversations with an L
       xattr -d com.apple.quarantine shinro-analyzer-macos-arm64
       ```
   2. Or, approve execution from Settings:
-    - Double-click the executable to open it. If this is the first time of running, you will be shown a warning about potential privacy issues.
-    - Click on **Done**.
-    - Open Settings -> Privacy and Security -> Scroll down to find the entry for the tool, and click on **Open Anyway**. Follow the prompts.
+      - Double-click the executable to open it. If this is the first time of running, you will be shown a warning about potential privacy issues.
+      - Click on **Done**.
+      - Open Settings -> Privacy and Security -> Scroll down to find the entry for the tool, and click on **Open Anyway**. Follow the prompts.
 - The app opens, and a WebUI is available at [http://localhost:13000](http://localhost:13000) by default.
 - The port used by the app is configurable as follows.
   ```shell
