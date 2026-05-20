@@ -1,5 +1,7 @@
 import { createContext, useContext, useState, useCallback, useEffect, useMemo, useRef } from 'react';
 import type { ParsedTraceResponse, ChatMessage, ToolCallInfo } from '../types';
+import { ParserStatus } from '../types';
+import { useNotifications } from './NotificationContext';
 import {
   executeQuery,
   fetchSystemTables,
@@ -138,12 +140,39 @@ function generateQueryTitle(sql: string): string {
 
 const EMPTY_CHAT: ChatMessage[] = [];
 
+const SECTION_LABELS: Record<keyof ParsedTraceResponse, string> = {
+  metadata: 'Metadata',
+  tableIOStats: 'Table I/O Stats',
+  memoryTracking: 'Memory Tracking',
+  materializedViewStats: 'Materialized Views',
+  mvCascadeTree: 'MV Cascade Tree',
+};
+
 export function TraceProvider({ children }: { children: React.ReactNode }) {
   const [queryIds, setQueryIds] = useState<string[]>([]);
   const [queries, setQueries] = useState<Map<string, QRec>>(() => new Map());
   const [activeQueryId, setActiveQueryIdState] = useState<string | null>(null);
   const [editorQuery, setEditorQuery] = useState<string>('');
   const { activeClusterId, connections } = useConnection();
+  const { addNotification, clearAll: clearNotifications } = useNotifications();
+
+  const pushTraceNotifications = useCallback((parsed: ParsedTraceResponse) => {
+    clearNotifications();
+    (Object.keys(SECTION_LABELS) as (keyof ParsedTraceResponse)[]).forEach((key) => {
+      const section = parsed[key];
+      if (!section.messages || section.messages.length === 0) return;
+      let type: 'error' | 'warning' | 'info';
+      let autoDismissMs: number | null;
+      if (section.status === ParserStatus.Error) {
+        type = 'error'; autoDismissMs = null;
+      } else if (section.status === ParserStatus.Partial) {
+        type = 'warning'; autoDismissMs = 10000;
+      } else {
+        type = 'info'; autoDismissMs = 6000;
+      }
+      addNotification({ type, section: SECTION_LABELS[key], messages: section.messages, autoDismissMs });
+    });
+  }, [addNotification, clearNotifications]);
 
   // Debounced autosave for query text
   const autosaveTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -260,9 +289,13 @@ export function TraceProvider({ children }: { children: React.ReactNode }) {
         const parsed = await parseQuery(id);
         if (parsed) {
           upsertQRec(id, { traceResult: parsed, executionState: 'done', executionError: null });
+          pushTraceNotifications(parsed);
         } else {
           upsertQRec(id, { executionState: 'error', executionError: 'Failed to parse trace data.' });
         }
+      } else {
+        const existing = queries.get(id);
+        if (existing?.traceResult) pushTraceNotifications(existing.traceResult);
       }
 
 
@@ -278,7 +311,7 @@ export function TraceProvider({ children }: { children: React.ReactNode }) {
         }
       }
     },
-    [queries, upsertQRec],
+    [queries, upsertQRec, activeClusterId, pushTraceNotifications],
   );
 
   const runTrace = useCallback(
@@ -346,6 +379,7 @@ export function TraceProvider({ children }: { children: React.ReactNode }) {
         traceName: description,
         traceDescription: description,
       });
+      pushTraceNotifications(parsed);
 
 
       // Step 4 — persist parsed trace to SQLite (scoped to active cluster)
@@ -388,7 +422,7 @@ export function TraceProvider({ children }: { children: React.ReactNode }) {
 
       return true;
     },
-    [upsertQRec, refreshQueryList, activeClusterId, connections],
+    [upsertQRec, refreshQueryList, activeClusterId, connections, pushTraceNotifications],
   );
 
   const deleteQuery = useCallback(

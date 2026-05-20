@@ -5,6 +5,7 @@ import TopNav from './TopNav';
 import DashboardPanel from './DashboardPanel';
 import ShinroAI from '../pages/ShinroAI';
 import TraceEntryPage from '../pages/TraceEntryPage';
+import NotificationToastContainer from './NotificationToast';
 import { useTrace } from '../context/TraceContext';
 import { useConversation } from '../context/ConversationContext';
 import './AppLayout.css';
@@ -72,6 +73,7 @@ export default function AppLayout() {
 
   return (
     <div className={`app-layout ${sidebarCollapsed ? 'sidebar-collapsed' : ''}`}>
+      <NotificationToastContainer />
       <div className="app-body">
         <Sidebar />
         <div className="app-content">

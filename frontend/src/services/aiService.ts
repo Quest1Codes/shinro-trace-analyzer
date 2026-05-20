@@ -7,7 +7,12 @@ const API_BASE = '/api/ai';
 export async function getMcpStatus(): Promise<MCPStatus> {
   try {
     const res = await fetch(`${API_BASE}/mcp/status`);
-    if (!res.ok) throw new Error();
+    if (!res.ok) {
+      const errorBody = await res.text();
+      throw new Error(
+        `Failed to fetch MCP status: ${res.status} ${res.statusText}${errorBody ? ` - ${errorBody}` : ''}`,
+      );
+    }
     return res.json();
   } catch {
     return { connected: false, tools: [] };
@@ -32,7 +37,7 @@ type AIKeyStatus = Record<LLMProvider, boolean> & { [K in LLMProvider as `${K}Mo
 export async function getAIKeyStatus(): Promise<AIKeyStatus> {
   try {
     const res = await fetch(`${API_BASE}/keys`);
-    if (!res.ok) throw new Error();
+    if (!res.ok) throw new Error(`Failed to fetch AI key status: ${res.status} ${res.statusText}`);
     const data = await res.json() as { provider: LLMProvider, model: string, hasKey: boolean }[];
     const aiKeys: AIKeyStatus = { openai: false, anthropic: false, openrouter: false }
     for (const entry of data) {
@@ -155,7 +160,8 @@ export async function streamChat(
             callbacks.onError(event.content || 'Unknown error');
             return;
         }
-      } catch {
+      } catch (error) {
+        console.warn('Failed to parse event payload', { error, data });
       }
     }
   }

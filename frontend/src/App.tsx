@@ -3,6 +3,7 @@ import { ConnectionProvider } from './context/ConnectionContext';
 import { TraceProvider } from './context/TraceContext';
 import { ThemeProvider } from './context/ThemeContext';
 import { ConversationProvider } from './context/ConversationContext';
+import { NotificationProvider } from './context/NotificationContext';
 import AppLayout from './components/AppLayout';
 import './styles/theme.css';
 
@@ -11,6 +12,7 @@ export default function App() {
     <ThemeProvider>
       <BrowserRouter>
         <ConnectionProvider>
+          <NotificationProvider>
           <TraceProvider>
             <ConversationProvider>
               <Routes>
@@ -19,6 +21,7 @@ export default function App() {
               </Routes>
             </ConversationProvider>
           </TraceProvider>
+          </NotificationProvider>
         </ConnectionProvider>
       </BrowserRouter>
     </ThemeProvider>
