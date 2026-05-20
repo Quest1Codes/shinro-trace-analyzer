@@ -1,3 +1,4 @@
+import { meta } from "zod/mini";
 import type {
   ParserResponse,
   QueryMetadata,
@@ -359,8 +360,16 @@ export class TraceParser {
       status: ParserStatus.SUCCESS,
       messages: new Array<string>(),
     } as ParserResponse<MaterializedViewStats[]>;
+
+    const metadata = this.getMetadata();
+
     const stats = new Array<MaterializedViewStats>();
     response.response = stats;
+
+    if (metadata.response?.queryType !== "Insert") {
+      response.messages.push("MV Stats only available on INSERT queries.");
+      return response;
+    }
 
     if (
       !this.view_log_content?.["data"] ||
@@ -398,6 +407,11 @@ export class TraceParser {
       status: ParserStatus.SUCCESS,
       messages: new Array<string>(),
     } as ParserResponse<MVCascadeTree>;
+
+    if (this.getMetadata().response?.queryType !== "Insert") {
+      response.messages.push("MV Fanout is only available on INSERT queries.");
+      return response;
+    }
 
     const sourceTableMap = new Map<string, MVCascadeNode[]>();
 
