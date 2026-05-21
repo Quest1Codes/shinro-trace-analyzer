@@ -35,14 +35,41 @@ Supported on macOS, with other platforms arriving soon.
   ./shinro-analyzer-macos-arm64 --port=13001
   ```
 
+## Demo & Screenshots
+
 <details>
-<summary>
-    Screenshots
-</summary>
+<summary>Expand</summary>
 
-![Screenshot of terminal output](./images/terminal.png)
+### <u>Demo Video</u>
 
-![Screenshot of browser](./images/webui.png)
+[![Watch Demo Video](https://img.shields.io/badge/Watch-Demo%20Video-red?style=flat-square)](https://www.youtube.com/watch?v=gk4DKxoTR28)
+
+[![Shinro Query Trace Analyzer — Demo](https://img.youtube.com/vi/gk4DKxoTR28/sddefault.jpg)](https://www.youtube.com/watch?v=gk4DKxoTR28)
+
+### <u>Screenshots</u>
+
+**Terminal** — launch the analyzer from the command line; it starts a local web server on port 13000
+
+![Terminal](./images/terminal.png)
+
+**Query Editor** — paste or write a ClickHouse SQL query, optionally add context for Shinro AI, and hit Analyze trace
+
+![Query Editor](./images/query-editor.png)
+
+**Session Overview** — Shinro AI on the left, analysis dashboard on the right, switchable via the top tab bar
+
+![Session Overview](./images/session-overview.png)
+
+<table>
+  <tr>
+    <td align="center"><b>Shinro AI Analysis</b><br/>Tool calls, executive summary, and key metrics — plain-language diagnosis of where the time went<br/><br/><img src="./images/shinro-ai-chat.png" width="420"/></td>
+    <td align="center"><b>Analysis Dashboard</b><br/>Execution time, peak memory, rows read, and a full per-table I/O breakdown across all 17 tables<br/><br/><img src="./images/analysis-dashboard.png" width="420"/></td>
+  </tr>
+  <tr>
+    <td align="center"><b>Query Editor Panel</b><br/>The traced query with syntax highlighting and one-click re-run<br/><br/><img src="./images/dashboard-query-editor.png" width="420"/></td>
+    <td align="center"><b>Materialized Views</b><br/>Cascade-depth graph showing every MV triggered by the query and its individual cost<br/><br/><img src="./images/materialized-views.png" width="420"/></td>
+  </tr>
+</table>
 
 </details>
 
