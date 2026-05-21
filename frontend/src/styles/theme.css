@@ -1,0 +1,342 @@
+
+
+
+:root {
+
+  --bg-primary:    #FFFFFF;
+  --bg-secondary:  #F1F5F9;
+  --bg-tertiary:   #F0F1F7;
+  --bg-card:       #FFFFFF;
+  --bg-input:      #FFFFFF;
+  --bg-hover:      #F0F1F7;
+
+
+  --border-color:  #CBD5E1;
+  --border-accent: #94A3B8;
+
+
+  --text-primary:   #0F172A;
+  --text-secondary: #334155;
+  --text-muted:     #64748B;
+
+
+  --accent-navy:         #071850;
+  --accent-orange:       #F36921;
+  --accent-orange-hover: #d45a16;
+  --accent-orange-bg:    #FEF1EA;
+
+
+  --accent-teal:    #0F8B8D;
+  --accent-yellow:  #FBB609;
+  --accent-burgundy:#7D2A1E;
+
+
+  --accent-green:   #16A34A;
+  --accent-warning: #D97706;
+  --accent-red:     #DC2626;
+  --accent-info:    #0284C7;
+
+
+  --pale-navy:      #F0F1F7;
+  --pale-orange:    #FEF1EA;
+  --pale-teal:      #E5F2F2;
+  --surface:        #F1F5F9;
+
+  --bg-modifier:    rgba(0, 0, 0, 0.06);
+
+  --logo-navy:      var(--accent-navy);
+
+
+  --font-display: 'Inter', system-ui, sans-serif;
+  --font-sans:    'IBM Plex Sans', system-ui, sans-serif;
+  --font-mono:    'IBM Plex Mono', 'SF Mono', monospace;
+  --font-logo:    'Satoshi', system-ui, sans-serif;
+
+
+  --radius-sm: 4px;
+  --radius-md: 6px;
+  --radius-lg: 8px;
+
+
+  --shadow-card: 0 1px 3px rgba(0, 0, 0, 0.08);
+
+
+  --overlay-bg: rgba(0, 0, 0, 0.3);
+}
+
+
+/* ── Dark theme — VS Code Dark (blue tokens → navy #071850) ── */
+[data-theme="dark"] {
+  /* Backgrounds — VS Code editor/shell grays */
+  --bg-primary:    #1E1E1E;   /* editor-background            */
+  --bg-secondary:  #252526;   /* menu-bg / sidebar            */
+  --bg-tertiary:   #1A1A1A;   /* deeper wells                 */
+  --bg-card:       #2D2D2D;   /* tab-selected / panel surface */
+  --bg-input:      #3C3C3C;   /* VS Code input background     */
+  --bg-hover:      #2A2D2E;   /* VS Code list hover           */
+
+  /* Borders */
+  --border-color:  #303031;   /* widget-border                */
+  --border-accent: #454545;   /* menu-separator-bg            */
+
+  /* Text */
+  --text-primary:   #D4D4D4;  /* editor-foreground            */
+  --text-secondary: #CCCCCC;  /* menu-fg                      */
+  --text-muted:     #A6A6A6;  /* input-placeholder-fg         */
+
+  /* Surfaces / misc */
+  --bg-modifier:    rgba(255, 255, 255, 0.06);
+  --pale-navy:      rgba(7, 24, 80, 0.55);
+  --surface:        #252526;
+
+  /* Logo: navy parts → white in dark mode */
+  --logo-navy:      #FFFFFF;
+
+  --accent-orange-bg: rgba(243, 105, 33, 0.15);
+  --overlay-bg:    rgba(0, 0, 0, 0.72);
+  --shadow-card:   0 2px 16px rgba(0, 0, 0, 0.55);
+}
+
+
+* {
+  margin: 0;
+  padding: 0;
+  box-sizing: border-box;
+}
+
+
+html, body, #root {
+  height: 100%;
+  background: var(--bg-primary);
+  color: var(--text-primary);
+  font-family: var(--font-sans);
+  font-size: 14px;
+  -webkit-font-smoothing: antialiased;
+}
+
+
+h1, h2, .display {
+  font-family: var(--font-display);
+  font-weight: 700;
+}
+
+
+h3, h4, h5, h6 {
+  font-family: var(--font-sans);
+  font-weight: 600;
+}
+
+
+code, pre, .mono, .eyebrow, .breadcrumb {
+  font-family: var(--font-mono);
+}
+
+
+.logo-wordmark {
+  font-family: var(--font-logo);
+  font-weight: 700;
+}
+
+
+::selection {
+  background: var(--accent-navy);
+  color: #fff;
+}
+
+::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--bg-primary);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--border-accent);
+  border-radius: 3px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--border-accent);
+}
+
+input, textarea, select, button {
+  font-family: var(--font-sans);
+  font-size: 13px;
+}
+
+a {
+  color: var(--accent-orange);
+  text-decoration: none;
+}
+
+a:hover {
+  color: var(--accent-orange-hover);
+}
+
+code {
+  font-family: var(--font-mono);
+  background: var(--surface);
+  color: var(--accent-navy);
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+[data-theme="dark"] code {
+  background: rgba(255, 255, 255, 0.07);
+  color: var(--accent-orange);
+}
+
+[data-theme="dark"] ::selection {
+  background: rgba(7, 24, 80, 0.75);
+  color: #fff;
+}
+
+
+.label {
+  font-size: 10px;
+  font-weight: 600;
+  font-family: var(--font-mono);
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--accent-teal);
+}
+
+.label-muted {
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1.5px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+}
+
+
+.badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 10px;
+  border-radius: var(--radius-sm);
+  font-size: 10px;
+  font-weight: 600;
+  letter-spacing: 1px;
+  text-transform: uppercase;
+}
+
+.badge-success {
+  background: rgba(22, 163, 74, 0.12);
+  color: var(--accent-green);
+  border: 1px solid rgba(22, 163, 74, 0.3);
+}
+
+.badge-warning {
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--accent-warning);
+  border: 1px solid rgba(217, 119, 6, 0.3);
+}
+
+.badge-error {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--accent-red);
+  border: 1px solid rgba(220, 38, 38, 0.3);
+}
+
+.badge-info {
+  background: rgba(2, 132, 199, 0.12);
+  color: var(--accent-info);
+  border: 1px solid rgba(2, 132, 199, 0.3);
+}
+
+
+.btn-primary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  background: var(--accent-orange);
+  color: #FFFFFF;
+  font-family: var(--font-sans);
+  font-weight: 600;
+  font-size: 13px;
+  letter-spacing: 0.5px;
+  border: none;
+  border-radius: var(--radius-md);
+  padding: 10px 24px;
+  cursor: pointer;
+  transition: background 0.2s;
+}
+
+.btn-primary:hover {
+  background: var(--accent-orange-hover);
+  transform: none;
+}
+
+.btn-secondary {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: transparent;
+  color: var(--text-primary);
+  border: 1px solid var(--border-accent);
+  border-radius: var(--radius-md);
+  font-weight: 600;
+  font-size: 12px;
+  letter-spacing: 0.5px;
+  cursor: pointer;
+  transition: all 0.2s;
+}
+
+.btn-secondary:hover {
+  background: var(--bg-hover);
+  border-color: var(--text-muted);
+}
+
+
+.input-field {
+  width: 100%;
+  padding: 10px 14px;
+  background: var(--bg-input);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-md);
+  color: var(--text-primary);
+  outline: none;
+  transition: border-color 0.2s;
+}
+
+.input-field:focus {
+  border-color: var(--accent-orange);
+}
+
+.input-field::placeholder {
+  color: var(--text-muted);
+}
+
+
+.logo-mark {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 120px;
+}
+
+.logo-wordmark {
+  font-family: var(--font-logo);
+  font-weight: 700;
+  color: var(--accent-navy);
+}
+
+
+[data-theme="dark"] .logo-wordmark,
+.on-dark .logo-wordmark {
+  color: #FFFFFF;
+}
+
+
+.dot-green {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  display: inline-block;
+  background: var(--accent-green);
+}

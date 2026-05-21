@@ -1,0 +1,217 @@
+.top-nav {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  height: 52px;
+  padding: 0 20px;
+  background: var(--bg-secondary);
+  border-bottom: 1px solid var(--border-color);
+  flex-shrink: 0;
+}
+
+[data-theme="dark"] .top-nav {
+  background: var(--bg-secondary);
+  border-bottom-color: var(--border-color);
+}
+
+.top-nav-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.top-nav-context {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+
+.top-nav-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-nav-tabs {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.top-nav-tab {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 7px 16px;
+  background: transparent;
+  border: none;
+  color: var(--text-muted);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 20px;
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  white-space: nowrap;
+}
+
+.top-nav-tab:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+[data-theme="dark"] .top-nav-tab:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+.top-nav-tab.active {
+  background: var(--accent-orange-bg);
+  color: var(--accent-orange);
+}
+
+[data-theme="dark"] .top-nav-tab.active {
+  background: var(--accent-orange-bg);
+  color: var(--accent-orange);
+}
+
+
+.top-nav-context {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  background: transparent;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 5px 8px;
+  border-radius: var(--radius-sm);
+  transition: all 0.15s;
+  font-family: var(--font-sans);
+  max-width: 320px;
+}
+
+.top-nav-context:hover {
+  color: var(--text-primary);
+  background: var(--bg-hover);
+}
+
+.top-nav-context-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.top-nav-edit-icon {
+  opacity: 0;
+  flex-shrink: 0;
+  transition: opacity 0.15s;
+  color: var(--text-muted);
+}
+
+.top-nav-context:hover .top-nav-edit-icon {
+  opacity: 1;
+}
+
+.top-nav-expert-sep {
+  width: 1px;
+  height: 20px;
+  background: var(--border-color);
+  flex-shrink: 0;
+  margin: 0;
+}
+
+.top-nav-expert-dollar {
+  font-family: var(--font-mono);
+  color: var(--accent-orange);
+  font-size: 11px;
+  font-weight: 500;
+  opacity: 0.65;
+  line-height: 1;
+}
+
+.top-nav-expert-arrow {
+  color: var(--accent-orange);
+  opacity: 0.75;
+  flex-shrink: 0;
+}
+
+.top-nav-expert-label {
+  display: inline-flex;
+  align-items: center;
+  line-height: 1.05;
+}
+
+.top-nav-expert-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  align-self: center;
+  height: 30px;
+  gap: 5px;
+  padding: 0 11px;
+  background: var(--accent-orange-bg);
+  border: 1px solid rgba(243, 105, 33, 0.25);
+  color: var(--accent-orange);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: -0.4px;
+  word-spacing: -1px;
+  cursor: pointer;
+  border-radius: 20px;
+  transition: all 0.12s;
+  font-family: var(--font-mono);
+  white-space: nowrap;
+}
+
+.top-nav-expert-btn:hover {
+  background: var(--accent-orange-bg);
+  border-color: rgba(243, 105, 33, 0.4);
+  filter: brightness(1.05);
+}
+
+.top-nav-expert-btn:active {
+  transform: scale(0.97);
+  filter: brightness(0.95);
+}
+
+.top-nav-expert-btn.active {
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  color: #fff;
+}
+
+.top-nav-expert-btn.active .top-nav-expert-dollar,
+.top-nav-expert-btn.active .top-nav-expert-arrow {
+  color: #fff;
+  opacity: 0.85;
+}
+
+[data-theme="dark"] .top-nav-expert-btn.active {
+  background: var(--accent-orange);
+  border-color: var(--accent-orange);
+  color: #fff;
+}
+
+.top-nav-rename-input {
+  background: var(--bg-primary);
+  border: 1px solid var(--accent-orange);
+  border-radius: var(--radius-sm);
+  padding: 5px 10px;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: var(--font-sans);
+  color: var(--text-primary);
+  outline: none;
+  width: 280px;
+  max-width: 100%;
+  box-shadow: 0 0 0 3px rgba(243, 105, 33, 0.12);
+}
+

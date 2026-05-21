@@ -1,0 +1,88 @@
+.expert-help-page {
+  padding: 32px 28px 48px;
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+  overflow-y: auto;
+  height: 100%;
+}
+
+.expert-help-header {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.expert-help-title {
+  font-size: 22px;
+  font-weight: 800;
+  text-transform: uppercase;
+  letter-spacing: 1.5px;
+  color: var(--text-primary);
+  margin: 0;
+}
+
+.expert-help-content {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  width: min(100%, 920px);
+  margin: 0 auto;
+}
+
+.expert-help-tagline {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--accent-orange);
+  margin: 0;
+  font-style: italic;
+  letter-spacing: 0.2px;
+}
+
+.expert-help-body-text {
+  font-size: 13px;
+  color: var(--text-secondary);
+  line-height: 1.7;
+  margin: 0;
+}
+
+.expert-help-link {
+  color: var(--accent-orange);
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.expert-help-link:hover {
+  text-decoration: underline;
+}
+
+.expert-help-divider {
+  height: 1px;
+  width: min(100%, 920px);
+  margin: 2px auto 0;
+  background: var(--border-color);
+  flex-shrink: 0;
+}
+
+.expert-help-form-section {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  width: min(100%, 920px);
+  margin: 0 auto;
+}
+
+.expert-help-form-title {
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  margin: 0;
+}
+
+.expert-help-form-container {
+  min-height: 120px;
+}
+
+

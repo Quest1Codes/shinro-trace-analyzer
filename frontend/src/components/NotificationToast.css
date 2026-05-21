@@ -1,0 +1,222 @@
+.notif-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  width: 340px;
+  pointer-events: none;
+}
+
+/* ── Card ── */
+.notif-card {
+  position: relative;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: var(--radius-lg);
+  box-shadow: 0 4px 20px rgba(0, 0, 0, 0.12), 0 1px 4px rgba(0, 0, 0, 0.08);
+  overflow: hidden;
+  pointer-events: all;
+  animation: notif-slide-in 0.22s cubic-bezier(0.22, 1, 0.36, 1) forwards;
+}
+
+.notif-card--exiting {
+  animation: notif-slide-out 0.28s cubic-bezier(0.4, 0, 1, 1) forwards;
+}
+
+/* colored left border per type */
+.notif-card--error  { border-left: 3px solid var(--accent-red); }
+.notif-card--warning { border-left: 3px solid var(--accent-warning); }
+.notif-card--info   { border-left: 3px solid var(--accent-info); }
+
+/* ── Progress bar ── */
+.notif-progress {
+  position: absolute;
+  bottom: 0;
+  left: 0;
+  height: 2px;
+  width: 100%;
+  transform-origin: left center;
+  animation: notif-progress-shrink linear forwards;
+}
+
+.notif-progress--error   { background: var(--accent-red); }
+.notif-progress--warning { background: var(--accent-warning); }
+.notif-progress--info    { background: var(--accent-info); }
+
+/* ── Header ── */
+.notif-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 12px 6px;
+  gap: 8px;
+}
+
+.notif-header-left {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 0;
+}
+
+.notif-type-icon {
+  flex-shrink: 0;
+}
+
+.notif-type-icon--error   { color: var(--accent-red); }
+.notif-type-icon--warning { color: var(--accent-warning); }
+.notif-type-icon--info    { color: var(--accent-info); }
+
+.notif-section {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-primary);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.notif-badge {
+  flex-shrink: 0;
+  font-size: 9px;
+  font-weight: 700;
+  letter-spacing: 0.8px;
+  text-transform: uppercase;
+  padding: 1px 5px;
+  border-radius: 3px;
+}
+
+.notif-badge--error {
+  background: rgba(220, 38, 38, 0.12);
+  color: var(--accent-red);
+}
+
+.notif-badge--warning {
+  background: rgba(217, 119, 6, 0.12);
+  color: var(--accent-warning);
+}
+
+.notif-badge--info {
+  background: rgba(2, 132, 199, 0.12);
+  color: var(--accent-info);
+}
+
+.notif-dismiss {
+  flex-shrink: 0;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 20px;
+  height: 20px;
+  background: transparent;
+  border: none;
+  border-radius: var(--radius-sm);
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+
+.notif-dismiss:hover {
+  background: var(--bg-hover);
+  color: var(--text-primary);
+}
+
+/* ── Messages ── */
+.notif-messages {
+  list-style: none;
+  padding: 0 12px 8px 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.notif-message {
+  font-size: 11.5px;
+  color: var(--text-secondary);
+  line-height: 1.45;
+  padding-left: 10px;
+  position: relative;
+}
+
+.notif-message::before {
+  content: '';
+  position: absolute;
+  left: 0;
+  top: 6px;
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: var(--text-muted);
+}
+
+.notif-show-more {
+  display: block;
+  width: 100%;
+  padding: 4px 12px 8px;
+  background: transparent;
+  border: none;
+  text-align: left;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: color 0.15s;
+}
+
+.notif-show-more:hover {
+  color: var(--text-secondary);
+}
+
+/* ── Overflow pill ── */
+.notif-overflow-pill {
+  pointer-events: all;
+  align-self: flex-end;
+  background: var(--bg-card);
+  border: 1px solid var(--border-color);
+  border-radius: 20px;
+  padding: 4px 12px;
+  font-size: 11px;
+  color: var(--text-muted);
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+  box-shadow: var(--shadow-card);
+}
+
+.notif-overflow-pill:hover {
+  background: var(--bg-hover);
+  color: var(--text-secondary);
+}
+
+/* ── Animations ── */
+@keyframes notif-slide-in {
+  from {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px));
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes notif-slide-out {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+    max-height: 200px;
+    margin-bottom: 0;
+  }
+  to {
+    opacity: 0;
+    transform: translateX(calc(100% + 24px));
+    max-height: 0;
+    margin-bottom: -8px;
+  }
+}
+
+@keyframes notif-progress-shrink {
+  from { transform: scaleX(1); }
+  to   { transform: scaleX(0); }
+}

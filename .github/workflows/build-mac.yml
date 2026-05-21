@@ -1,0 +1,42 @@
+name: Trace Analyzer - Build macOS
+
+on:
+  # push:
+  #   branches: [main, frontend-trace-analyzer]
+  pull_request:
+  #   branches: [main]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: macos-latest
+    env:
+      FORCE_JAVASCRIPT_ACTIONS_TO_NODE24: true
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: "1.3.10"
+
+      - name: Install dependencies
+        run: bun ci
+
+      - name: Build executable
+        run: bun build.ts
+
+      - name: Verify and sign binary
+        run: |
+          BINARY=shinro-analyzer-macos-arm64
+          ENTITLEMENTS=entitlements.plist
+          echo "Arch: $(uname -m)"
+          echo "File: $(file $BINARY)"
+          codesign -d --verbose $BINARY 2>&1 || true
+          echo "Applying ad-hoc signature with entitlements..."
+          codesign --sign - --force --options runtime --entitlements $ENTITLEMENTS $BINARY
+          codesign -d --verbose --entitlements - $BINARY 2>&1
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: shinro-analyzer-macos-arm64
+          path: shinro-analyzer-macos-arm64

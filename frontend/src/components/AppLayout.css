@@ -1,0 +1,156 @@
+.app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+.app-body {
+  display: flex;
+  flex: 1;
+  overflow: hidden;
+}
+
+.app-content {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  min-width: 0;
+}
+
+.app-panels {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+}
+
+.app-conversation {
+  flex: 1;
+  display: flex;
+  overflow: hidden;
+  min-width: 380px;
+}
+
+.app-dashboard {
+  display: flex;
+  flex-direction: column;
+  overflow: hidden;
+  background: var(--bg-primary);
+  flex-shrink: 0;
+}
+
+
+.app-layout.sidebar-collapsed .sidebar {
+  width: 56px;
+  min-width: 56px;
+}
+
+.app-layout.sidebar-collapsed .sidebar-new-trace,
+.app-layout.sidebar-collapsed .sidebar-section {
+  display: none;
+}
+
+.app-layout.sidebar-collapsed .sidebar-header {
+  padding: 14px 0 10px;
+  align-items: center;
+}
+
+.app-layout.sidebar-collapsed .sidebar-logo-wrap {
+  width: 38px;
+  justify-content: center;
+  padding: 4px;
+}
+
+
+.app-layout.sidebar-collapsed .sidebar-bottom-btn span,
+.app-layout.sidebar-collapsed .sidebar-bottom-divider {
+  display: none;
+}
+
+.app-layout.sidebar-collapsed .sidebar-bottom-btn {
+  padding: 8px;
+  justify-content: center;
+}
+
+.app-layout.sidebar-collapsed .sidebar-bottom-nav {
+  align-items: center;
+  padding: 8px 6px 14px;
+  border-top: none;
+}
+
+.app-layout.sidebar-collapsed .sidebar-bottom-row {
+  flex-direction: column;
+  gap: 6px;
+}
+
+
+.panel-resize-handle {
+  width: 4px;
+  flex-shrink: 0;
+  cursor: col-resize;
+  position: relative;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: transparent;
+  transition: background 0.15s;
+  z-index: 5;
+}
+
+.panel-resize-handle::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: -3px;
+  right: -3px;
+  bottom: 0;
+}
+
+.panel-resize-handle:hover,
+.panel-resize-handle:active {
+  background: rgba(243, 105, 33, 0.35);
+}
+
+.resize-handle-grip {
+  width: 2px;
+  height: 28px;
+  border-radius: 1px;
+  background: var(--border-color);
+  opacity: 0;
+  transition: opacity 0.15s;
+}
+
+.panel-resize-handle:hover .resize-handle-grip {
+  opacity: 1;
+  background: var(--accent-orange);
+}
+
+
+.app-conversation ::-webkit-scrollbar {
+  width: 5px;
+}
+
+.app-conversation ::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-conversation ::-webkit-scrollbar-thumb {
+  background: transparent;
+  border-radius: 3px;
+  transition: background 0.3s;
+}
+
+.app-conversation:hover ::-webkit-scrollbar-thumb {
+  background: var(--border-color);
+}
+
+
+.app-conversation * {
+  scrollbar-width: thin;
+  scrollbar-color: transparent transparent;
+}
+
+.app-conversation:hover * {
+  scrollbar-color: var(--border-color) transparent;
+}
