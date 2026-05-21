@@ -35,16 +35,18 @@ Supported on macOS, with other platforms arriving soon.
   ./shinro-analyzer-macos-arm64 --port=13001
   ```
 
-<details>
-<summary>Demo &amp; Screenshots</summary>
+## Demo & Screenshots
 
-### Demo Video
+<details>
+<summary>Expand</summary>
+
+### <u>Demo Video</u>
 
 [![Watch Demo Video](https://img.shields.io/badge/Watch-Demo%20Video-red?style=flat-square)](https://www.youtube.com/watch?v=gk4DKxoTR28)
 
 [![Shinro Query Trace Analyzer — Demo](https://img.youtube.com/vi/gk4DKxoTR28/sddefault.jpg)](https://www.youtube.com/watch?v=gk4DKxoTR28)
 
-### Screenshots
+### <u>Screenshots</u>
 
 **Terminal** — launch the analyzer from the command line; it starts a local web server on port 13000
 
