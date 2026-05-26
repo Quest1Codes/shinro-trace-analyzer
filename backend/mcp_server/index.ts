@@ -59,6 +59,7 @@ function noQueryMsg(query_id: string): {
 const queryIdParam = {
   query_id: z
     .string()
+    .regex(/^[a-fA-F0-9-]{36}$/, "Invalid query_id format")
     .describe(
       "The ClickHouse query_id of the run to analyze. Use list_queries to discover available IDs.",
     ),

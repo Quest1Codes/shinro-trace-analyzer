@@ -428,3 +428,7 @@ export async function querySystemTables(queryID: string): Promise<void> {
     await writeFile(tablesPath, BLANK_JSON_DATA);
   }
 }
+
+export function validateQueryID(queryID: unknown): queryID is string {
+  return typeof queryID === "string" && /^[a-fA-F0-9-]{36}$/.test(queryID);
+}

@@ -5,6 +5,7 @@ import { readFile } from "fs/promises";
 import type { ParsedTraceResponse } from "./definitions";
 
 import { getTracePath, getQueryLogPath, getViewLogPath } from "../helpers/fs";
+import { validateQueryID } from "../query/clickhouse";
 
 router.get("/parse/:query_id", async (req: any, res: any) => {
   /*
@@ -12,6 +13,10 @@ router.get("/parse/:query_id", async (req: any, res: any) => {
   2. parse the logs and extract relevant information
   3. return the parsed information as json response
    */
+
+  if (!validateQueryID(req.params.query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
 
   const tracePath = getTracePath(req.params.query_id);
   const queryLogPath = getQueryLogPath(req.params.query_id);
