@@ -21,6 +21,7 @@ import {
   type AICredential,
   type LLMProvider,
 } from "../keychain/ai_credential";
+import { validateQueryID } from "../query/clickhouse";
 
 const router = express.Router();
 
@@ -131,6 +132,10 @@ router.post("/chat", async (req: any, res: any) => {
 
   if (!LLM_PROVIDERS.includes(provider)) {
     return res.status(400).json({ error: "Invalid provider" });
+  }
+
+  if (query_id !== undefined && query_id !== null && !validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
   }
 
   const cred = await aiKeychain.getCredentialFor(provider);
@@ -331,6 +336,9 @@ router.post("/trace", (req: any, res: any) => {
   if (!query_id) {
     return res.status(400).json({ error: "query_id is required" });
   }
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   try {
     const traceJson = parsed_trace ? JSON.stringify(parsed_trace) : null;
     const suggestionsJson = suggestions ? JSON.stringify(suggestions) : null;
@@ -368,6 +376,9 @@ router.get("/traces", (req: any, res: any) => {
  */
 router.put("/traces/:query_id/title", (req: any, res: any) => {
   const { query_id } = req.params;
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   const { title } = req.body;
   if (!title) {
     return res.status(400).json({ error: "title is required" });
@@ -386,6 +397,9 @@ router.put("/traces/:query_id/title", (req: any, res: any) => {
  */
 router.put("/traces/:query_id/suggestions", (req: any, res: any) => {
   const { query_id } = req.params;
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   const { suggestions } = req.body;
   if (!suggestions || !Array.isArray(suggestions)) {
     return res.status(400).json({ error: "suggestions array is required" });
@@ -404,6 +418,9 @@ router.put("/traces/:query_id/suggestions", (req: any, res: any) => {
  */
 router.put("/traces/:query_id/query-text", (req: any, res: any) => {
   const { query_id } = req.params;
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   const { query_text } = req.body;
   if (query_text === undefined) {
     return res.status(400).json({ error: "query_text is required" });
@@ -421,6 +438,9 @@ router.put("/traces/:query_id/query-text", (req: any, res: any) => {
  */
 router.get("/messages/:query_id", (req: any, res: any) => {
   const { query_id } = req.params;
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   try {
     const rows = getMessages(query_id);
     const messages = rows.map((r) => ({
@@ -442,6 +462,9 @@ router.get("/messages/:query_id", (req: any, res: any) => {
  */
 router.post("/messages/:query_id", (req: any, res: any) => {
   const { query_id } = req.params;
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   const { role, content, toolCalls } = req.body;
   if (!role || content === undefined) {
     return res.status(400).json({ error: "role and content are required" });
@@ -466,6 +489,9 @@ router.post("/messages/:query_id", (req: any, res: any) => {
  */
 router.delete("/messages/:query_id", (req: any, res: any) => {
   const { query_id } = req.params;
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   try {
     clearMessages(query_id);
     return res.json({ success: true });
@@ -479,6 +505,9 @@ router.delete("/messages/:query_id", (req: any, res: any) => {
  */
 router.delete("/traces/:query_id", (req: any, res: any) => {
   const { query_id } = req.params;
+  if (!validateQueryID(query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   try {
     deleteTrace(query_id);
     return res.json({ success: true });

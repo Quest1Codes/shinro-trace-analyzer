@@ -8,6 +8,7 @@ import {
   querySystemTables,
   testConnection,
   invalidateCHClient,
+  validateQueryID,
 } from "./clickhouse";
 import {
   clickhouseKeychain,
@@ -165,6 +166,9 @@ router.post("/execute-query", async (req: any, res: any) => {
 });
 
 router.get("/query-system-tables/:query_id", async (req: any, res: any) => {
+  if (!validateQueryID(req.params.query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   if (!clickhouseKeychain.getActiveCredential()) {
     return res.status(400).json({
       error: "ClickHouse credentials not configured. Call /credentials first.",
@@ -181,6 +185,9 @@ router.get("/query-system-tables/:query_id", async (req: any, res: any) => {
 
 router.get("/clear-logs/:query_id", async (req: any, res: any) => {
   // deletes the ~/.shinro/logs/{query_id} directory.
+  if (!validateQueryID(req.params.query_id)) {
+    return res.status(400).json({ error: "Invalid query_id" });
+  }
   const dir = getLogDirectory(req.params.query_id);
   if (!dir) {
     return res.json({ message: "No logs found for this query_id." });
