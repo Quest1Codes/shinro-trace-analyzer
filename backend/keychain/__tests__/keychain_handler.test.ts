@@ -1,97 +1,87 @@
-import fs from "fs";
-import os from "os";
-import path from "path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import {
-  createKeychainBackend,
-  EncryptedFileKeychainBackend,
   KeychainHandler,
-  MacOSKeychainBackend,
-  type KeychainBackend,
+  type KeyringEntry,
+  type KeyringEntryFactory,
 } from "../keychain_handler";
 
 describe("KeychainHandler", () => {
-  let tempDir: string;
-
-  beforeEach(() => {
-    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "shinro-keychain-"));
-  });
-
   afterEach(() => {
     vi.restoreAllMocks();
-    fs.rmSync(tempDir, { recursive: true, force: true });
   });
 
-  it("should use the encrypted file backend on Linux", () => {
-    vi.spyOn(os, "platform").mockReturnValue("linux");
+  it("should read and deserialize data from the keyring entry", async () => {
+    const entry: KeyringEntry = {
+      getPassword: vi
+        .fn()
+        .mockResolvedValue('{"version":1,"data":{"apiKey":"super-secret"}}'),
+      setPassword: vi.fn().mockResolvedValue(undefined),
+      deleteCredential: vi.fn().mockResolvedValue(true),
+    };
+    const createEntry: KeyringEntryFactory = vi.fn().mockReturnValue(entry);
 
-    const backend = createKeychainBackend(
-      "shinro",
-      "credentials",
-      "Shinro Credentials",
-      tempDir,
-    );
-
-    expect(backend).toBeInstanceOf(EncryptedFileKeychainBackend);
-  });
-
-  it("should use the macOS keychain backend on macOS", () => {
-    vi.spyOn(os, "platform").mockReturnValue("darwin");
-
-    const backend = createKeychainBackend(
-      "shinro",
-      "credentials",
-      "Shinro Credentials",
-      tempDir,
-    );
-
-    expect(backend).toBeInstanceOf(MacOSKeychainBackend);
-  });
-
-  it("should round-trip encrypted file data without writing plaintext", async () => {
-    const backend = new EncryptedFileKeychainBackend<{ apiKey: string }>(
+    const handler = new KeychainHandler(
       "shinro",
       "ai_credentials",
-      tempDir,
+      "Shinro - AI Credentials",
+      createEntry,
     );
 
-    await backend.write({ apiKey: "super-secret-value" });
-
-    const storedFiles = fs.readdirSync(tempDir);
-    expect(storedFiles).toContain("store.key");
-
-    const payloadFile = storedFiles.find((file) => file.endsWith(".json"));
-    expect(payloadFile).toBeDefined();
-
-    const raw = fs.readFileSync(path.join(tempDir, payloadFile!), "utf-8");
-    expect(raw).not.toContain("super-secret-value");
-    expect(await backend.read()).toEqual({ apiKey: "super-secret-value" });
+    expect(await handler.read()).toEqual({ apiKey: "super-secret" });
+    expect(createEntry).toHaveBeenCalledWith("shinro", "ai_credentials");
   });
 
-  it("should clear encrypted file entries", async () => {
-    const backend = new EncryptedFileKeychainBackend<{ token: string }>(
+  it("should serialize data before writing to the keyring entry", async () => {
+    const entry: KeyringEntry = {
+      getPassword: vi.fn().mockResolvedValue(undefined),
+      setPassword: vi.fn().mockResolvedValue(undefined),
+      deleteCredential: vi.fn().mockResolvedValue(true),
+    };
+
+    const handler = new KeychainHandler(
       "shinro",
-      "session",
-      tempDir,
+      "credentials",
+      "Shinro Credentials",
+      () => entry,
     );
 
-    await backend.write({ token: "abc123" });
-    await backend.clear();
+    await handler.write([{ provider: "openai", apiKey: "token" }]);
 
-    expect(await backend.read()).toBeUndefined();
+    expect(entry.setPassword).toHaveBeenCalledWith(
+      '{"version":1,"data":[{"provider":"openai","apiKey":"token"}]}',
+    );
+  });
+
+  it("should clear the underlying keyring entry", async () => {
+    const entry: KeyringEntry = {
+      getPassword: vi.fn().mockResolvedValue(undefined),
+      setPassword: vi.fn().mockResolvedValue(undefined),
+      deleteCredential: vi.fn().mockResolvedValue(true),
+    };
+
+    const handler = new KeychainHandler(
+      "shinro",
+      "credentials",
+      "Shinro Credentials",
+      () => entry,
+    );
+
+    await handler.clear();
+
+    expect(entry.deleteCredential).toHaveBeenCalledTimes(1);
   });
 
   it("should cache and clone empty array values", async () => {
-    const backend: KeychainBackend<string[]> = {
-      read: vi.fn().mockResolvedValue([]),
-      write: vi.fn().mockResolvedValue(undefined),
-      clear: vi.fn().mockResolvedValue(undefined),
+    const entry: KeyringEntry = {
+      getPassword: vi.fn().mockResolvedValue('{"version":1,"data":[]}'),
+      setPassword: vi.fn().mockResolvedValue(undefined),
+      deleteCredential: vi.fn().mockResolvedValue(true),
     };
     const handler = new KeychainHandler(
       "shinro",
       "credentials",
       "Shinro Credentials",
-      backend,
+      () => entry,
     );
 
     const first = await handler.read();
@@ -99,8 +89,24 @@ describe("KeychainHandler", () => {
 
     const second = await handler.read();
 
-    expect(backend.read).toHaveBeenCalledTimes(1);
+    expect(entry.getPassword).toHaveBeenCalledTimes(1);
     expect(first).toEqual(["mutated"]);
     expect(second).toEqual([]);
+  });
+
+  it("should return undefined when the keyring entry read fails", async () => {
+    const entry: KeyringEntry = {
+      getPassword: vi.fn().mockRejectedValue(new Error("unavailable")),
+      setPassword: vi.fn().mockResolvedValue(undefined),
+      deleteCredential: vi.fn().mockResolvedValue(true),
+    };
+    const handler = new KeychainHandler(
+      "shinro",
+      "credentials",
+      "Shinro Credentials",
+      () => entry,
+    );
+
+    expect(await handler.read()).toBeUndefined();
   });
 });

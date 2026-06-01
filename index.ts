@@ -30,7 +30,7 @@ async function main() {
 
   printGreen("Redirecting in 3 seconds...");
   setTimeout(() => {
-    openUrl(`http://localhost:${PORT}`);
+    void openUrl(`http://localhost:${PORT}`);
   }, 3000);
 
   await Promise.all([startBackend(PORT)]);

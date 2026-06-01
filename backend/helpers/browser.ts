@@ -1,41 +1,11 @@
-import { execFileSync } from "child_process";
+import open from "open";
 
-export interface BrowserOpenCommand {
-  command: string;
-  args: string[];
-}
-
-export function getBrowserOpenCommand(
+export async function openUrl(
   url: string,
-  platform: NodeJS.Platform = process.platform,
-): BrowserOpenCommand | null {
-  if (platform === "darwin") {
-    return { command: "open", args: [url] };
-  }
-
-  if (platform === "linux") {
-    return { command: "xdg-open", args: [url] };
-  }
-
-  if (platform === "win32") {
-    return { command: "cmd", args: ["/c", "start", "", url] };
-  }
-
-  return null;
-}
-
-export function openUrl(
-  url: string,
-  platform: NodeJS.Platform = process.platform,
-  execImpl: typeof execFileSync = execFileSync,
-): boolean {
-  const command = getBrowserOpenCommand(url, platform);
-  if (!command) {
-    return false;
-  }
-
+  openImpl: typeof open = open,
+): Promise<boolean> {
   try {
-    execImpl(command.command, command.args, { stdio: "ignore" });
+    await openImpl(url);
     return true;
   } catch {
     return false;

@@ -9,7 +9,7 @@ Supported on macOS and Linux.
 ## Requirements
 | Kind              | Supported                                                              |
 |-------------------|------------------------------------------------------------------------|
-| OS                | macOS **13** (Ventura)+ or Linux (`xdg-open` is optional and only used for automatic browser launch) |
+| OS                | macOS **13** (Ventura)+ or Linux with a supported desktop browser and system keyring |
 | Clickhouse Server | Local and Cloud deployments - **v25, v26**                             |
 | Query Types       | INSERT, SELECT                                                         |
 | LLM Provider      | OpenAI, Anthropic, OpenRouter                                          |
@@ -25,8 +25,9 @@ Supported on macOS and Linux.
   ```shell
   xattr -d com.apple.quarantine ./shinro-analyzer-macos-arm64
   ```
-- The app opens, and a WebUI is available at [http://localhost:13000](http://localhost:13000) by default. On Linux, the app uses `xdg-open` when available; otherwise, open the printed URL manually.
-- Credentials are stored locally. On macOS they use the system credential store; on Linux they use an encrypted local store under `~/.shinro/credentials/`.
+- The app opens, and a WebUI is available at [http://localhost:13000](http://localhost:13000) by default.
+- Credentials are stored locally using the system credential store through `@napi-rs/keyring`.
+- On headless Linux environments or WSL, browser launch and keyring support may require additional desktop/keyring setup.
 - The port used by the app is configurable as follows.
   ```shell
   ./shinro-analyzer-<platform>-<arch> --port=13001
@@ -97,8 +98,8 @@ bun run test:watch
 ### Test Coverage
 
 - **Parser Logic**: 41 tests covering trace parsing, metadata extraction, table I/O stats, memory tracking, and materialized view analysis
-- **Helpers and Platform Compatibility**: 29 tests covering file system operations, browser launch behavior, and cross-platform credential storage
-- **Overall Coverage**: 90.68% statements, 82.63% branches, 87.23% functions, 91.19% lines
+- **Helpers and Platform Compatibility**: 25 tests covering file system operations, browser launch behavior, and cross-platform credential storage
+- **Overall Coverage**: 95.14% statements, 83.67% branches, 94.11% functions, 95.83% lines
 
 ### Test Design
 
