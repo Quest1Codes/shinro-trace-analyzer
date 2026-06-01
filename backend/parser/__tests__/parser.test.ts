@@ -325,15 +325,20 @@ describe('TraceParser', () => {
     });
 
     it('should aggregate multiple read events for same table', () => {
-      const traceLog = 'default.test (id1) (SelectExecutor): Reading approx. 1000 rows with 4 streams\ndefault.test (id2) (SelectExecutor): Reading approx. 2000 rows with 6 streams';
+      // READ_PATTERN requires hex IDs ([0-9a-f\-]+), so use valid hex query part IDs
+      const traceLog = 'default.test (aabbccdd-1234-5678-9abc-ddeeff001122) (SelectExecutor): Reading approx. 1000 rows with 4 streams\ndefault.test (eeff0011-2222-3333-4444-555566667777) (SelectExecutor): Reading approx. 2000 rows with 6 streams';
       const queryLog = '{"data":[{"formatted_query":"SELECT 1"}]}';
       const viewLog = '{"data":[]}';
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getTableIOStats();
       
-      // Multiple read events handling is tested in other tests
-      expect(result).toBeDefined();
+      // Both events belong to the same table and should be aggregated
+      expect(result.response).toHaveLength(1);
+      expect(result.response?.[0].fullTableName).toBe('default.test');
+      expect(result.response?.[0].reads).toHaveLength(2);
+      expect(result.response?.[0].totalRowsRead).toBe(3000); // 1000 + 2000
+      expect(result.response?.[0].totalStreamsUsed).toBe(10); // 4 + 6
     });
 
     it('should handle tables without database prefix', () => {
@@ -351,13 +356,14 @@ describe('TraceParser', () => {
     it('should return partial status when view log is missing', () => {
       const traceLog = 'default.test (id1) (SelectExecutor): Reading approx. 1000 rows with 4 streams';
       const queryLog = '{"data":[{"formatted_query":"SELECT 1"}]}';
-      const viewLog = '{"data":[]}';
+      // viewLog with no "data" field triggers PARTIAL status (view_log_content["data"] is undefined)
+      const viewLog = '{}';
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getTableIOStats();
       
-      // Implementation returns SUCCESS even when view log is empty
-      expect(result.status).toBe(ParserStatus.SUCCESS);
+      expect(result.status).toBe(ParserStatus.PARTIAL);
+      expect(result.messages).toContain('No view log data found. MV usage and FINAL clause stats may be missing.');
     });
   });
 
@@ -451,11 +457,25 @@ describe('TraceParser', () => {
           query_kind: 'Select'
         }]
       });
-      const viewLog = '{"data":[]}';
+      // Use a populated viewLog to confirm early exit is due to query type (Select), not empty view data
+      const viewLog = JSON.stringify({
+        data: [{
+          view_name: 'test_mv',
+          view_query: 'SELECT * FROM test',
+          view_target: 'target_table',
+          event_time_microseconds: '1234567890123456',
+          read_rows: '1000',
+          read_bytes: '5000',
+          written_rows: '500',
+          written_bytes: '2500',
+          peak_memory_usage: '1000000'
+        }]
+      });
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMaterializedViewStats();
       
+      expect(result.status).toBe(ParserStatus.SUCCESS);
       expect(result.response).toEqual([]);
       expect(result.messages).toContain('MV Stats only available on INSERT queries.');
     });
@@ -651,13 +671,14 @@ describe('TraceParser', () => {
           query_kind: 'Insert'
         }]
       });
-      const viewLog = '{"data":[]}';
+      // viewLog with no "data" field: view_log_content["data"] is undefined -> triggers ERROR
+      const viewLog = '{}';
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMVCascadeTree();
       
-      // View log handling is tested in other tests
-      expect(result).toBeDefined();
+      expect(result.status).toBe(ParserStatus.ERROR);
+      expect(result.messages).toContain('No view log data found. MV cascade tree cannot be constructed.');
     });
 
     it('should handle table names with database prefix', () => {

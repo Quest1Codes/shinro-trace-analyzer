@@ -169,10 +169,16 @@ describe('File System Helpers', () => {
     });
 
     it('should read trace file when it exists', () => {
+      // getParserData makes 6 existsSync calls:
+      // - 3 in getLogDirectory (one per file: trace, queryLog, viewLog)
+      // - 3 more direct calls inside getParserData body (one per file)
       vi.mocked(fs.existsSync)
-        .mockReturnValueOnce(true)  // trace path
-        .mockReturnValueOnce(true)  // query log path
-        .mockReturnValueOnce(true); // view log path
+        .mockReturnValueOnce(true)  // getLogDirectory for trace -> tracePath != null
+        .mockReturnValueOnce(true)  // getLogDirectory for queryLog -> queryLogPath != null
+        .mockReturnValueOnce(true)  // getLogDirectory for viewLog -> viewLogPath != null
+        .mockReturnValueOnce(true)  // existsSync(tracePath) -> read file
+        .mockReturnValueOnce(true)  // existsSync(queryLogPath) -> read file
+        .mockReturnValueOnce(true); // existsSync(viewLogPath) -> read file
       
       vi.mocked(fs.readFileSync)
         .mockReturnValueOnce('trace log content')
@@ -181,11 +187,9 @@ describe('File System Helpers', () => {
       
       const result = getParserData('test-query-id');
       
-      // Due to afterEach cleanup, just verify the function returns something when files exist
-      expect(result).toBeDefined();
-      expect(typeof result.trace).toBe('string');
-      expect(typeof result.queryLog).toBe('string');
-      expect(typeof result.viewLog).toBe('string');
+      expect(result.trace).toBe('trace log content');
+      expect(result.queryLog).toBe('{"data":[{"query":"test"}]}');
+      expect(result.viewLog).toBe('{"data":[{"view":"test"}]}');
     });
 
     it('should return blank JSON data when log files do not exist', () => {
@@ -202,10 +206,14 @@ describe('File System Helpers', () => {
     });
 
     it('should handle mixed file existence', () => {
+      // When getLogDirectory returns false for queryLog, queryLogPath is null,
+      // so no further existsSync call is made for it (5 total calls instead of 6).
       vi.mocked(fs.existsSync)
-        .mockReturnValueOnce(true)   // trace path exists
-        .mockReturnValueOnce(false)  // query log path does not exist
-        .mockReturnValueOnce(true);  // view log path exists
+        .mockReturnValueOnce(true)   // getLogDirectory for trace -> tracePath != null
+        .mockReturnValueOnce(false)  // getLogDirectory for queryLog -> queryLogPath = null
+        .mockReturnValueOnce(true)   // getLogDirectory for viewLog -> viewLogPath != null
+        .mockReturnValueOnce(true)   // existsSync(tracePath) -> read file
+        .mockReturnValueOnce(true);  // existsSync(viewLogPath) -> read file
       
       vi.mocked(fs.readFileSync)
         .mockReturnValueOnce('trace log content')
@@ -213,11 +221,9 @@ describe('File System Helpers', () => {
       
       const result = getParserData('test-query-id');
       
-      // Due to afterEach cleanup, just verify the function handles mixed file existence
-      expect(result).toBeDefined();
-      expect(typeof result.trace).toBe('string');
-      expect(typeof result.queryLog).toBe('string');
-      expect(typeof result.viewLog).toBe('string');
+      expect(result.trace).toBe('trace log content');
+      expect(result.queryLog).toBe('{"data":[]}'); // falls back to BLANK_JSON_DATA
+      expect(result.viewLog).toBe('{"data":[{"view":"test"}]}');
     });
 
     it('should use correct file paths', () => {
@@ -225,8 +231,9 @@ describe('File System Helpers', () => {
       
       getParserData('test-query-id');
       
-      // Check that the function attempts to check file existence
-      expect(fs.existsSync).toHaveBeenCalled();
+      // Verify existsSync is called with paths containing the query ID and expected path segments
+      expect(fs.existsSync).toHaveBeenCalledWith(expect.stringContaining('test-query-id'));
+      expect(fs.existsSync).toHaveBeenCalledWith(expect.stringContaining('.shinro/logs'));
     });
   });
 });
