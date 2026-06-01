@@ -715,11 +715,6 @@ describe('TraceParser', () => {
 
   describe('jsonToNumber', () => {
     it('should return number as-is when input is number', () => {
-      const traceLog = '';
-      const queryLog = '{"data":[]}';
-      const viewLog = '{"data":[]}';
-      
-      const parser = new TraceParser(traceLog, queryLog, viewLog);
       // Test indirectly through getMetadata which uses jsonToNumber
       const queryLogWithNumbers = JSON.stringify({
         data: [{
