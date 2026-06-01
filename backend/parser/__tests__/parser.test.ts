@@ -73,6 +73,14 @@ describe('TraceParser', () => {
       
       expect(parser.view_log_content).toEqual({ data: [{ view_name: 'test_view' }] });
     });
+
+    it('should handle invalid JSON input', () => {
+      const { traceLog, viewLog } = createParserTestData();
+      const invalidQueryLog = 'not valid json {';
+      
+      // Parser should throw an error when given invalid JSON
+      expect(() => new TraceParser(traceLog, invalidQueryLog, viewLog)).toThrow(SyntaxError);
+    });
   });
 
   describe('getMetadata', () => {
@@ -189,7 +197,7 @@ describe('TraceParser', () => {
       expect(result.messages).toContain('No trace log data found. Metadata fields from trace log will be empty.');
     });
 
-    it('should return error status when query log is empty', () => {
+    it('should return error status when both trace log and query log are empty', () => {
       const traceLog = '';
       const queryLog = '{"data":[]}';
       const viewLog = '{"data":[]}';
@@ -348,7 +356,7 @@ describe('TraceParser', () => {
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getTableIOStats();
       
-      // Should return partial status when view log is empty
+      // Implementation returns SUCCESS even when view log is empty
       expect(result.status).toBe(ParserStatus.SUCCESS);
     });
   });
@@ -374,8 +382,14 @@ describe('TraceParser', () => {
       const result = parser.getMemoryTracking();
       
       expect(result.response?.queryMemoryProgression).toHaveLength(2);
+      
+      // Verify first memory entry individually
       expect(result.response?.queryMemoryProgression[0].usageBytes).toBe(500 * 1024 * 1024);
+      expect(result.response?.queryMemoryProgression[0].timestamp).toBe('2025.01.01 12:00:00.000');
+      
+      // Verify second memory entry individually
       expect(result.response?.queryMemoryProgression[1].usageBytes).toBe(750 * 1024 * 1024);
+      expect(result.response?.queryMemoryProgression[1].timestamp).toBe('2025.01.01 12:00:01.000');
     });
 
     it('should convert memory units correctly', () => {
@@ -388,7 +402,17 @@ describe('TraceParser', () => {
       
       // Check that memory tracking works with different units
       expect(result.response?.peakQueryMemoryBytes).toBe(1024);
-      expect(result.response?.queryMemoryProgression.length).toBeGreaterThan(0);
+      expect(result.response?.queryMemoryProgression).toHaveLength(3); // Only current memory entries
+      
+      // Verify each memory entry individually
+      expect(result.response?.queryMemoryProgression[0].usageBytes).toBe(1024); // 1 KiB
+      expect(result.response?.queryMemoryProgression[0].timestamp).toBe('2025.01.01 12:00:01.000');
+      
+      expect(result.response?.queryMemoryProgression[1].usageBytes).toBe(1024 * 1024); // 1 MiB
+      expect(result.response?.queryMemoryProgression[1].timestamp).toBe('2025.01.01 12:00:02.000');
+      
+      expect(result.response?.queryMemoryProgression[2].usageBytes).toBe(1024 * 1024 * 1024); // 1 GiB
+      expect(result.response?.queryMemoryProgression[2].timestamp).toBe('2025.01.01 12:00:03.000');
     });
 
     it('should extract timestamps from memory tracking lines', () => {
@@ -399,6 +423,7 @@ describe('TraceParser', () => {
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMemoryTracking();
       
+      expect(result.status).toBe(ParserStatus.SUCCESS);
       expect(result.response?.queryMemoryProgression[0].timestamp).toBe('2025.01.01 12:00:00.123');
     });
 
@@ -410,6 +435,8 @@ describe('TraceParser', () => {
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMemoryTracking();
       
+      // Implementation returns SUCCESS even when no memory data is found
+      expect(result.status).toBe(ParserStatus.SUCCESS);
       expect(result.response?.peakQueryMemoryBytes).toBeNull();
       expect(result.response?.queryMemoryProgression).toHaveLength(0);
     });

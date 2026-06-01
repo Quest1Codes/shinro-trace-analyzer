@@ -181,8 +181,11 @@ describe('File System Helpers', () => {
       
       const result = getParserData('test-query-id');
       
-      // Just check that the function returns something when files exist
+      // Due to afterEach cleanup, just verify the function returns something when files exist
       expect(result).toBeDefined();
+      expect(typeof result.trace).toBe('string');
+      expect(typeof result.queryLog).toBe('string');
+      expect(typeof result.viewLog).toBe('string');
     });
 
     it('should return blank JSON data when log files do not exist', () => {
@@ -210,8 +213,11 @@ describe('File System Helpers', () => {
       
       const result = getParserData('test-query-id');
       
-      // Just check that the function handles mixed file existence
+      // Due to afterEach cleanup, just verify the function handles mixed file existence
       expect(result).toBeDefined();
+      expect(typeof result.trace).toBe('string');
+      expect(typeof result.queryLog).toBe('string');
+      expect(typeof result.viewLog).toBe('string');
     });
 
     it('should use correct file paths', () => {
