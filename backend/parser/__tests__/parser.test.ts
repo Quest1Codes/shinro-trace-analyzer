@@ -720,8 +720,6 @@ describe('TraceParser', () => {
       const viewLog = '{"data":[]}';
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
-      // Access private method via test data
-      const result = parser.getMetadata();
       // Test indirectly through getMetadata which uses jsonToNumber
       const queryLogWithNumbers = JSON.stringify({
         data: [{
