@@ -96,7 +96,7 @@ export async function setBinaryPath(path: string): Promise<void> {
 }
 
 async function resolveHostname(hostname: string): Promise<string> {
-  // macOS mDNS .local hostnames are not resolvable by the ClickHouse binary.
+  // Some .local hostnames are not resolvable by the ClickHouse binary.
   // Use the OS resolver (which supports mDNS) to get the actual IP.
   if (hostname.endsWith(".local")) {
     try {

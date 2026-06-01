@@ -299,7 +299,7 @@ export interface ConnectionSummary {
 // ── Connection CRUD ───────────────────────────────────────
 
 /**
- * Save a connection (password is stored separately in the macOS Keychain).
+ * Save a connection (password is stored separately in the local credential store).
  */
 export function saveConnection(
   cluster_id: string,
