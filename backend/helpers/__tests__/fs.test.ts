@@ -1,4 +1,4 @@
-import { vi, describe, it, expect, beforeEach } from 'vitest';
+import { vi, describe, it, expect, beforeEach, afterEach } from 'vitest';
 import fs from 'fs';
 import os from 'os';
 import {
@@ -20,6 +20,11 @@ describe('File System Helpers', () => {
     vi.clearAllMocks();
     // Mock os.homedir
     vi.mocked(os.homedir).mockReturnValue('/home/testuser');
+  });
+
+  // CRITICAL: Clean up mocks after each test to prevent mock leakage
+  afterEach(() => {
+    vi.restoreAllMocks();
   });
 
   describe('getLogDirectory', () => {

@@ -1,13 +1,47 @@
-import { describe, it, expect } from 'vitest';
+import { describe, it, expect, afterEach } from 'vitest';
 import { TraceParser } from '../parser';
 import { ParserStatus } from '../definitions';
 
+// Test factory for creating consistent test data
+function createParserTestData(overrides?: {
+  traceLog?: string;
+  queryLog?: string;
+  viewLog?: string;
+}) {
+  return {
+    traceLog: overrides?.traceLog || '',
+    queryLog: overrides?.queryLog || '{"data":[]}',
+    viewLog: overrides?.viewLog || '{"data":[]}',
+  };
+}
+
+function createValidQueryLog(query = 'SELECT 1') {
+  return JSON.stringify({
+    data: [{
+      formatted_query: query,
+      query_kind: 'Select',
+      read_rows: '1000',
+      read_bytes: '5000',
+      written_rows: '0',
+      written_bytes: '0',
+      result_rows: '100',
+      result_bytes: '1000',
+      query_duration_ms: '250',
+      current_database: 'default'
+    }]
+  });
+}
+
 describe('TraceParser', () => {
+  // CRITICAL: Clean up any potential state between tests
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
   describe('Constructor', () => {
     it('should initialize with trace log content split by newlines', () => {
-      const traceLog = 'line1\nline2\nline3';
-      const queryLog = '{"data":[]}';
-      const viewLog = '{"data":[]}';
+      const { traceLog, queryLog, viewLog } = createParserTestData({
+        traceLog: 'line1\nline2\nline3'
+      });
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       
@@ -15,9 +49,7 @@ describe('TraceParser', () => {
     });
 
     it('should handle empty trace log', () => {
-      const traceLog = '';
-      const queryLog = '{"data":[]}';
-      const viewLog = '{"data":[]}';
+      const { traceLog, queryLog, viewLog } = createParserTestData();
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       
@@ -25,9 +57,8 @@ describe('TraceParser', () => {
     });
 
     it('should parse query log JSON', () => {
-      const traceLog = '';
-      const queryLog = '{"data":[{"query":"SELECT 1"}]}';
-      const viewLog = '{"data":[]}';
+      const { traceLog, viewLog } = createParserTestData();
+      const queryLog = JSON.stringify({ data: [{ query: 'SELECT 1' }] });
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       
@@ -35,9 +66,8 @@ describe('TraceParser', () => {
     });
 
     it('should parse view log JSON', () => {
-      const traceLog = '';
-      const queryLog = '{"data":[]}';
-      const viewLog = '{"data":[{"view_name":"test_view"}]}';
+      const { traceLog, queryLog } = createParserTestData();
+      const viewLog = JSON.stringify({ data: [{ view_name: 'test_view' }] });
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       
@@ -48,8 +78,8 @@ describe('TraceParser', () => {
   describe('getMetadata', () => {
     it('should extract query ID from trace log', () => {
       const traceLog = '2025.01.01 12:00:00.000 {123e4567-e89b-12d3-a456-426614174000} (from 127.0.0.1) Query started';
-      const queryLog = '{"data":[{"formatted_query":"SELECT 1"}]}';
-      const viewLog = '{"data":[]}';
+      const queryLog = createValidQueryLog();
+      const viewLog = createParserTestData().viewLog;
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMetadata();
@@ -60,8 +90,8 @@ describe('TraceParser', () => {
 
     it('should extract source IP from trace log', () => {
       const traceLog = '2025.01.01 12:00:00.000 {123e4567-e89b-12d3-a456-426614174000} (from 192.168.1.1) Query started';
-      const queryLog = '{"data":[]}';
-      const viewLog = '{"data":[]}';
+      const queryLog = createValidQueryLog();
+      const viewLog = createParserTestData().viewLog;
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMetadata();
@@ -71,8 +101,8 @@ describe('TraceParser', () => {
 
     it('should extract timestamps from trace log', () => {
       const traceLog = '2025.01.01 12:00:00.000 {123e4567-e89b-12d3-a456-426614174000} Query started\n2025.01.01 12:00:05.000 Query finished';
-      const queryLog = '{"data":[]}';
-      const viewLog = '{"data":[]}';
+      const queryLog = createValidQueryLog();
+      const viewLog = createParserTestData().viewLog;
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMetadata();
@@ -83,8 +113,9 @@ describe('TraceParser', () => {
 
     it('should calculate execution time from timestamps', () => {
       const traceLog = '2025.01.01 12:00:00.000 {123e4567-e89b-12d3-a456-426614174000} Query started\n2025.01.01 12:00:05.000 Query finished';
+      // Use minimal query log without query_duration_ms so trace log timestamps take precedence
       const queryLog = '{"data":[]}';
-      const viewLog = '{"data":[]}';
+      const viewLog = createParserTestData().viewLog;
       
       const parser = new TraceParser(traceLog, queryLog, viewLog);
       const result = parser.getMetadata();
