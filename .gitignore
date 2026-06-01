@@ -26,3 +26,6 @@ shinro-analyzer-macos-arm64
 frontend/assets.ts
 
 index.js.map
+
+# Test coverage
+coverage/
