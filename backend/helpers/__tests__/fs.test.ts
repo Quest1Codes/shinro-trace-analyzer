@@ -7,8 +7,7 @@ import {
   getQueryLogPath,
   getViewLogPath,
   getTablesPath,
-  getParserData,
-  LOG_DIR
+  getParserData
 } from '../fs';
 
 // Mock fs module
