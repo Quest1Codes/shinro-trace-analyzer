@@ -79,6 +79,37 @@ Supported on macOS, with other platforms arriving soon.
 - Clone the repository, `cd` into the project directory.
 - Run `bun install` to install dependencies.
 - Run `bun build.ts` to build the frontend, and bundle the application into an executable. The built executable is present as `shinro-analyzer-macos-arm64` or `shinro-analyzer-macos-x86_64` in the same directory.
+
+## Testing
+
+The project includes a comprehensive unit test suite for backend components using Vitest.
+
+### Running Tests
+
+```bash
+# Run all tests
+npm test
+
+# Run tests with coverage report
+npm run test:coverage
+
+# Run tests in watch mode
+npm run test:watch
+```
+
+### Test Coverage
+
+- **Parser Logic**: 40 tests covering trace parsing, metadata extraction, table I/O stats, memory tracking, and materialized view analysis
+- **Helper Functions**: 18 tests covering file system operations and path management
+- **Overall Coverage**: 94.11% statements, 79.25% branches, 100% functions, 94.87% lines
+
+### Test Design
+
+- Unit tests only (no integration tests)
+- All dependencies mocked (ClickHouse, file system operations)
+- Fast execution (~150ms for full test suite)
+- TypeScript with ES module support
+
 ## License
 
 Apache 2.0 — see [LICENSE](./LICENSE) for details.
