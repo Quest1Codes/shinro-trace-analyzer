@@ -110,6 +110,69 @@ npm run test:watch
 - Fast execution (~150ms for full test suite)
 - TypeScript with ES module support
 
+## Data and Privacy
+
+Shinro Query Analyzer for ClickHouse is local-first and open source. The tool does not call Quest1 servers as part of normal diagnostic operation. Calls go only to your ClickHouse server and to the AI provider you configure. The source code is on GitHub for inspection and audit.
+
+| Data                                          | Local System | Quest1 Servers | AI Provider |
+|-----------------------------------------------|--------------|----------------|-------------|
+| ClickHouse connection details and credentials | **Yes**      | No             | No          |
+| ClickHouse queries gathered                   | **Yes**      | No             | No          |
+| Trace log data                                | **Yes**      | No             | **Yes**     |
+| ClickHouse system table data                  | **Yes**      | No             | **Yes**     |
+| MV fanout data                                | **Yes**      | No             | **Yes**     |
+| Query output rows                             | No           | No             | No          |
+| Feedback and feature requests                 | No           | **Yes**        | No          |
+
+Structured diagnostic data stored locally is encrypted. Trace logs are written to `~/.shinro` on the local filesystem only.
+
+## FAQ
+
+<details>
+<summary>Expand</summary>
+
+**How is the tool distributed?**
+
+Open source on GitHub. Clone the repo and build from source, or download a pre-built binary from the releases page. Requires a windowing system, the ClickHouse native command-line client, and a GUI browser.
+
+**What's the license?**
+
+Apache License Version 2.0
+
+**Is my data safe?**
+
+Yes. The tool makes no calls to Quest1 servers or services as part of diagnostic operation. All processing is local. Calls go only to the AI provider you configure and to your ClickHouse server. Local data is encrypted at rest. The source code is on GitHub if you want to verify any of this yourself.
+
+**What platforms are supported today?**
+
+macOS on Apple Silicon (ARM). Windows and Linux are on the roadmap.
+
+**Does it support both self-hosted (OSS) and ClickHouse Cloud?**
+
+Yes.
+
+**What ClickHouse versions are supported?**
+
+The tool supports version 25.x and above.
+
+**What query types are supported?**
+
+SELECT, INSERT, and UPDATE.
+
+**How are asynchronous inserts supported?**
+
+Async inserts are hard to trace by design — they execute in a separate scope with a different query ID from the one the client submitted, which breaks trace correlation. For diagnostic runs, the tool sets `async_insert = 0` for the session, forcing the insert to execute synchronously so its trace and system table records line up with the query you submitted. The setting is scoped to the diagnostic session; your cluster's default async behavior is unaffected.
+
+**How do I get the tool?**
+
+See the GitHub link below. Clone, build, or download a release binary.
+
+**Can I contribute?**
+
+Yes. Issues, pull requests, and bug reports welcome on the GitHub repo.
+
+</details>
+
 ## License
 
 Apache 2.0 — see [LICENSE](./LICENSE) for details.
