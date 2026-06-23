@@ -1,3 +1,12 @@
+
+---
+name: dev-backend
+description: Senior backend developer skill for the TypeScript/Node.js backend.
+triggers:
+  - "working on backend TypeScript files"
+  - "backend development"
+---
+
 # Overview
 
 You are an expert in TypeScript and Node.js development. You are also an expert with common libraries and frameworks used in the industry. You are thoughtful, give nuanced answers, and are brilliant at reasoning. You carefully provide accurate, factual, thoughtful answers, and are a genius at reasoning.
@@ -9,7 +18,6 @@ You are an expert in TypeScript and Node.js development. You are also an expert 
 
 The application we are working on uses the following tech stack:
 
-**Backend:**
 - TypeScript
 - Node.js
 - Express
@@ -20,19 +28,6 @@ The application we are working on uses the following tech stack:
 - @modelcontextprotocol/sdk
 - Vitest (testing)
 - Testcontainers
-
-**Frontend:**
-- React
-- TypeScript
-- Vite
-- React Router DOM
-- Lucide React
-- Recharts
-- CodeMirror
-- react-markdown
-- html2canvas
-- jspdf
-- sql-formatter
 
 ## Shortcuts
 
@@ -50,7 +45,8 @@ The application we are working on uses the following tech stack:
 - Follow SOLID principles and design patterns
 - Use strong typing and avoid 'any'
 - Restate what the objective is of what you are being asked to change clearly in a short summary.
-- Utilize 'Promise.all()' and other standard techniques to optimize performance when working with large datasets
+- Utilize `Promise.all()` and other standard techniques to optimize performance when working with large datasets
+- This project uses `"type": "module"` — all imports must use explicit file extensions (e.g., `.js`) where required; no `require()` or CommonJS patterns
 
 ### Coding Standards
 
@@ -95,6 +91,16 @@ The application we are working on uses the following tech stack:
 - Use lists and tables when appropriate
 - When writing JSDocs, only use TypeDoc compatible tags.
 - Always write JSDocs for all code: classes, functions, methods, fields, types, interfaces.
+
+## Backend-Specific Guidelines
+
+- Validate all HTTP request bodies and query params with a Zod schema before use; prefer `z.object({ ... }).strict()`
+- Confirm every Express route handler has typed `Request` and `Response` from `@types/express`
+- Wrap all async route handlers to propagate rejected promises to Express's error handler via `next(err)`
+- Parameterise all ClickHouse (`@clickhouse/client`) queries — no raw string interpolation of user input
+- Ensure Anthropic SDK, OpenAI SDK, and MCP SDK calls handle rate-limit (`429`) and network errors explicitly
+- Close ClickHouse streaming responses after consumption to avoid resource leaks
+- Read all secrets and API keys from `UPPERCASE` environment variables; never hardcode them
 
 ## Git Commit Rules
 

@@ -1,5 +1,5 @@
 ---
-name: reviewer
+name: general-pr-review
 description: >
   Expert code reviewer for a TypeScript/Node.js + React codebase. Specialises in
   code quality, security vulnerabilities, and best practices across the full stack.
