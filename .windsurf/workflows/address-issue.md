@@ -11,8 +11,8 @@ This workflow guides the agent to systematically understand an issue, implement 
    - Backend: TypeScript, Node.js, Express, Zod, ClickHouse, MCP SDK, Anthropic SDK, OpenAI SDK, and Vitest.
    - Frontend: React, TypeScript, Vite, React Router DOM, Recharts, CodeMirror, react-markdown, html2canvas, and jspdf.
 5. **Run Verifications:** Run only the relevant repository commands for the files changed.
-   - Backend changes: run `npm test` from the project root.
-   - Frontend changes: run `npm --prefix frontend run build` and `npm --prefix frontend run lint` from the project root.
+   - Backend changes: run `bun test` from the project root.
+   - Frontend changes: run `bun --cwd frontend run build` and `bun --cwd frontend run lint` from the project root.
    - Full-stack changes: run all of the commands above.
    Fix any resulting errors autonomously before continuing.
 6. **Draft PR Metadata:** Generate a conventional PR title and a bulleted PR description based on the diff. Include summary, root cause, fix, and verification notes. Print this draft to the chat for the user to review.
