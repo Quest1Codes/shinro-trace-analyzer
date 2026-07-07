@@ -13,7 +13,7 @@ Ask the user for the PR number or URL, then run `gh pr checkout [pr_number]`.
 Retrieve both PR discussion comments and review comments for the PR. Prefer comments with file and line context when implementing requested code changes.
 
 ## 3. Identify Scope & Load Skills
-Determine whether each requested change affects backend, frontend, or both. Dynamically adhere to the relevant stack conventions activated via agent.md global routing rules:
+Determine whether each requested change affects backend, frontend, or both. Dynamically adhere to the relevant stack conventions activated via AGENTS.md global routing rules:
 - Backend: `@skills:developer/backend`
 - Frontend: `@skills:developer/frontend`
 

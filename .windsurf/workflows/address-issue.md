@@ -1,3 +1,7 @@
+---
+description: Address Issue
+---
+
 # Workflow: Address Issue
 
 This workflow guides the agent to systematically understand an issue, implement a fix, perform rigorous pre-commit validation, and open a Pull Request only after manual user approval.
