@@ -1,10 +1,6 @@
-
 ---
 name: dev-backend
 description: Senior backend developer skill for the TypeScript/Node.js backend.
-triggers:
-  - "working on backend TypeScript files"
-  - "backend development"
 ---
 
 # Overview

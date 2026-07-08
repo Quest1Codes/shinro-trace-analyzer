@@ -1,9 +1,6 @@
 ---
 name: dev-frontend
 description: Senior frontend developer skill for the React/TypeScript/Vite frontend.
-triggers:
-  - "working on frontend tsx files"
-  - "frontend development"
 ---
 
 # Overview

@@ -1,9 +1,6 @@
 ---
 name: ts-pr-review
 description: Comprehensive review guidelines for analyzing TypeScript code changes.
-triggers:
-  - "reviewing a pull request with typescript files"
-  - "typescript pr review"
 ---
 
 # TypeScript PR Review Guidelines

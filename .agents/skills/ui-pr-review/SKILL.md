@@ -1,8 +1,6 @@
 ---
 name: ui-pr-review
 description: Visual presentation and frontend bundle optimization checks.
-triggers:
-  - "reviewing tsx or JSX file changes"
 ---
 
 # UI PR Review Guidelines

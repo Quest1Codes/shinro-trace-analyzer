@@ -1,11 +1,6 @@
 ---
 name: general-code-audit
 description: Mandated local code quality, security, and logical validation checks executed prior to any git commit or push.
-triggers:
-  - "reviewing a pull request"
-  - "completing an engineering task"
-  - "preparing to commit code"
-  - "pushing code to a branch"
 ---
 
 # Global Code Audit & Pre-Commit Protocol
