@@ -7,6 +7,7 @@
   "type": "module",
   "main": "index.js",
   "scripts": {
+    "lint": "eslint .",
     "test": "vitest",
     "test:coverage": "vitest --coverage",
     "test:watch": "vitest --watch"
@@ -25,7 +26,13 @@
     "zod": "^4.4.3"
   },
   "devDependencies": {
+    "@eslint/js": "^9.39.4",
     "@testcontainers/clickhouse": "^11.14.0",
+    "eslint": "^9.39.4",
+    "eslint-plugin-react-hooks": "^7.0.1",
+    "eslint-plugin-react-refresh": "^0.5.2",
+    "globals": "^17.5.0",
+    "typescript-eslint": "^8.58.2",
     "@types/express": "^5.0.6",
     "@types/node": "^25.8.0",
     "@vitest/coverage-v8": "^4.1.7",
