@@ -28,6 +28,8 @@ export default function ConnectionSetup() {
     url: 'http://localhost:8123',
     user: 'default',
     password: '',
+    nativePort: '',
+    nativeSecure: false,
   });
   const [binaryPath, setBinaryPath] = useState('');
   const [binaryStatus, setBinaryStatus] = useState<BinaryStatus>({ state: 'checking' });
@@ -161,6 +163,8 @@ export default function ConnectionSetup() {
         url: config.url.trim(),
         user: config.user.trim(),
         password: config.password,
+        nativePort: config.nativePort?.trim() || undefined,
+        nativeSecure: config.nativeSecure || undefined,
       }),
     });
     const credData: { success?: boolean; error?: string } = await credRes.json();
@@ -252,7 +256,7 @@ export default function ConnectionSetup() {
                     const match = savedCredentials.find((c) => c.url === config.url && c.user === config.user);
                     if (match) {
                       let host = match.url;
-                      try { host = new URL(match.url).hostname; } catch { }
+                      try { host = new URL(match.url).hostname; } catch (error) { void error; }
                       return <><span className="saved-cred-user">{match.user}</span><span className="saved-cred-at">@</span><span className="saved-cred-host">{host}</span></>;
                     }
                     return <span className="saved-cred-placeholder">Select a saved connection…</span>;
@@ -267,7 +271,7 @@ export default function ConnectionSetup() {
                   {savedCredentials.map((cred) => {
                     const isSelected = config.url === cred.url && config.user === cred.user;
                     let displayHost = cred.url;
-                    try { displayHost = new URL(cred.url).hostname; } catch { }
+                    try { displayHost = new URL(cred.url).hostname; } catch (error) { void error; }
                     return (
                       <div
                         key={`${cred.user}@${cred.url}`}
@@ -337,6 +341,35 @@ export default function ConnectionSetup() {
               disabled={isBusy}
               autoComplete="off"
             />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group flex-1">
+            <label className="field-label">NATIVE TCP PORT</label>
+            <input
+              className="input-field"
+              value={config.nativePort ?? ''}
+              onChange={handleConfigChange('nativePort')}
+              placeholder="9000 (optional)"
+              disabled={isBusy}
+              autoComplete="off"
+            />
+          </div>
+          <div className="form-group flex-1">
+            <label className="field-label">NATIVE TLS</label>
+            <div className="input-field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={config.nativeSecure ?? false}
+                onChange={(e) => {
+                  setConfig((prev) => ({ ...prev, nativeSecure: e.target.checked }));
+                  if (error) setError(null);
+                }}
+                disabled={isBusy}
+              />
+              <span>Use TLS for native TCP</span>
+            </div>
           </div>
         </div>
 

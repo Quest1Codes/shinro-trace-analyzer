@@ -77,7 +77,7 @@ router.get("/credentials", async (_req: any, res: any) => {
 });
 
 router.post("/credentials", async (req: any, res: any) => {
-  const { url, user, password, port, secure } = req.body;
+  const { url, user, password, port, secure, nativePort, nativeSecure } = req.body;
   if (!url || typeof url !== "string") {
     return res.status(400).json({ error: "url is required" });
   }
@@ -99,6 +99,8 @@ router.post("/credentials", async (req: any, res: any) => {
     user: typeof user === "string" && user ? user : "default",
     password: typeof password === "string" ? password : "",
     port: typeof port === "string" ? port : parsed.port || undefined,
+    nativePort: typeof nativePort === "string" && nativePort ? nativePort : undefined,
+    nativeSecure: typeof nativeSecure === "boolean" ? nativeSecure : undefined,
     secure: typeof secure === "boolean" ? secure : parsed.protocol === "https:",
   } as CHCredential;
 

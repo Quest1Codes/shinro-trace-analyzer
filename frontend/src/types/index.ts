@@ -2,6 +2,8 @@ export interface ConnectionConfig {
   url: string;
   user: string;
   password: string;
+  nativePort?: string;
+  nativeSecure?: boolean;
 }
 
 export interface QueryHistoryItem {

@@ -118,9 +118,11 @@ async function buildClientArgs(query: string): Promise<string[]> {
     args.push("--host", hostname);
 
     const httpPort = credentials.port || parsed.port;
-    const mapped = httpPort ? HTTP_TO_NATIVE_PORT[httpPort] : undefined;
-
-    if (mapped) {
+    if (credentials.nativePort?.trim()) {
+      args.push("--port", credentials.nativePort);
+      if (credentials.nativeSecure === true) args.push("--secure");
+    } else if (httpPort && HTTP_TO_NATIVE_PORT[httpPort]) {
+      const mapped = HTTP_TO_NATIVE_PORT[httpPort];
       args.push("--port", mapped.port);
       if (mapped.secure) args.push("--secure");
     } else if (httpPort) {
