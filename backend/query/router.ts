@@ -252,7 +252,15 @@ router.get("/connections/all", (_req: any, res: any) => {
  * Password is stored in the macOS Keychain.
  */
 router.post("/connections", async (req: any, res: any) => {
-  const { cluster_id, user_name, endpoint, password, skipTest } = req.body;
+  const {
+    cluster_id,
+    user_name,
+    endpoint,
+    password,
+    skipTest,
+    nativePort,
+    nativeSecure,
+  } = req.body;
   if (!endpoint) {
     return res.status(400).json({ error: "endpoint is required" });
   }
@@ -267,6 +275,10 @@ router.post("/connections", async (req: any, res: any) => {
   try {
     const user = user_name || "default";
     const pass = password || "";
+    const existingCredential = await clickhouseKeychain.getCredentialFor(
+      user,
+      endpoint,
+    );
     // Test connection before saving (unless caller already validated)
     if (!skipTest) {
       await testConnection(endpoint, user, pass);
@@ -279,6 +291,14 @@ router.post("/connections", async (req: any, res: any) => {
       user,
       password: pass,
       port: parsed.port || undefined,
+      nativePort:
+        typeof nativePort === "string"
+          ? nativePort
+          : existingCredential?.nativePort,
+      nativeSecure:
+        typeof nativeSecure === "boolean"
+          ? nativeSecure
+          : existingCredential?.nativeSecure,
       secure: parsed.protocol === "https:",
     };
     await clickhouseKeychain.upsertCredential(credential);

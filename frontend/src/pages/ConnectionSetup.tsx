@@ -7,6 +7,21 @@ import Quest1Logo from '../components/Quest1Logo';
 import Quest1LogoMark from '../components/Quest1LogoMark';
 import './ConnectionSetup.css';
 
+type SavedCredential = {
+  url: string;
+  user: string;
+  password: string;
+  secure: boolean;
+  nativePort?: string;
+  nativeSecure?: boolean;
+};
+
+type CredentialsResponse = {
+  configured: boolean;
+  active?: SavedCredential | null;
+  saved?: SavedCredential[];
+};
+
 type BinaryStatus =
   | { state: 'checking' }
   | { state: 'found'; path: string }
@@ -35,7 +50,7 @@ export default function ConnectionSetup() {
   const [binaryStatus, setBinaryStatus] = useState<BinaryStatus>({ state: 'checking' });
   const [testStep, setTestStep] = useState<TestStep>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [savedCredentials, setSavedCredentials] = useState<Array<{ url: string; user: string; password: string; secure: boolean }>>([]);
+  const [savedCredentials, setSavedCredentials] = useState<SavedCredential[]>([]);
   const [showSavedDropdown, setShowSavedDropdown] = useState(false);
 
 
@@ -55,11 +70,7 @@ export default function ConnectionSetup() {
 
     fetch('/api/query/credentials')
       .then((r) => r.json())
-      .then((data: {
-        configured: boolean;
-        active?: { url: string; user: string; password: string; secure: boolean } | null;
-        saved?: Array<{ url: string; user: string; password: string; secure: boolean }>;
-      }) => {
+      .then((data: CredentialsResponse) => {
         if (data.saved && data.saved.length > 0) {
           setSavedCredentials(data.saved);
         }
@@ -69,11 +80,19 @@ export default function ConnectionSetup() {
             url: data.active!.url,
             user: data.active!.user,
             password: data.active!.password ?? prev.password,
+            nativePort: data.active!.nativePort ?? prev.nativePort ?? '',
+            nativeSecure: data.active!.nativeSecure ?? prev.nativeSecure ?? false,
           }));
         } else if (data.saved && data.saved.length > 0) {
           // No active credential but saved ones exist — auto-fill the first
           const first = data.saved[0];
-          setConfig({ url: first.url, user: first.user, password: first.password });
+          setConfig({
+            url: first.url,
+            user: first.user,
+            password: first.password,
+            nativePort: first.nativePort ?? '',
+            nativeSecure: first.nativeSecure ?? false,
+          });
         }
       })
       .catch(() => { });
@@ -95,8 +114,14 @@ export default function ConnectionSetup() {
 
   const isBusy = testStep !== 'idle';
 
-  const selectSavedCredential = (cred: { url: string; user: string; password: string }) => {
-    setConfig({ url: cred.url, user: cred.user, password: cred.password });
+  const selectSavedCredential = (cred: SavedCredential) => {
+    setConfig({
+      url: cred.url,
+      user: cred.user,
+      password: cred.password,
+      nativePort: cred.nativePort ?? '',
+      nativeSecure: cred.nativeSecure ?? false,
+    });
     setShowSavedDropdown(false);
     if (error) setError(null);
   };
