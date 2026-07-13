@@ -1,6 +1,6 @@
 // this is the entrypoint to the app.
+import open from "open";
 import { startBackend } from "./backend";
-import { execSync } from "child_process";
 import { DEFAULT_PORT } from "./constants";
 
 import {
@@ -30,7 +30,7 @@ async function main() {
 
   printGreen("Redirecting in 3 seconds...");
   setTimeout(() => {
-    execSync(`open http://localhost:${PORT}`);
+    void open(`http://localhost:${PORT}`).catch(() => {});
   }, 3000);
 
   await Promise.all([startBackend(PORT)]);

@@ -477,7 +477,7 @@ export default function ConnectionSetup() {
 
         <div className="connection-footer">
           <span className="credentials-note">
-            <span className="dot dot-amber" /> CREDENTIALS STORED USING KEYCHAIN
+            <span className="dot dot-amber" /> CREDENTIALS STORED LOCALLY
           </span>
           <div className="footer-icons">
             <div className="help-popover-wrap">
@@ -491,7 +491,7 @@ export default function ConnectionSetup() {
               <div className="help-popover">
                 <p className="help-popover-title">Local Storage</p>
                 <ul className="help-popover-list">
-                  <li><strong>Credentials</strong> (URL, user, password) are stored securely in the macOS Keychain</li>
+                  <li><strong>Credentials</strong> (URL, user, password) are stored securely using the system credential store</li>
                   <li><strong>Trace logs</strong> and parsed results are written to <code>~/.shinro/</code> during each query run</li>
                 </ul>
                 <p className="help-popover-note">Nothing leaves your machine.</p>

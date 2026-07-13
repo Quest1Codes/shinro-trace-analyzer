@@ -238,7 +238,7 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
                   <rect x="3" y="8" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
                   <path d="M6 8V5.5a3 3 0 0 1 6 0V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
-                <p>Keys are encrypted and stored locally in <code>macOS keychain</code>.</p>
+                <p>Keys are stored locally using the system credential store.</p>
               </div>
 
 

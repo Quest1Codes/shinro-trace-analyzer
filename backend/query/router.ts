@@ -249,7 +249,7 @@ router.get("/connections/all", (_req: any, res: any) => {
 /**
  * POST /connections — Save a new connection.
  * Body: { cluster_id?, user_name, endpoint, password, skipTest? }
- * Password is stored in the macOS Keychain.
+ * Password is stored in the local credential store.
  */
 router.post("/connections", async (req: any, res: any) => {
   const {
@@ -284,7 +284,7 @@ router.post("/connections", async (req: any, res: any) => {
       await testConnection(endpoint, user, pass);
     }
     saveConnection(id, user, endpoint);
-    // Persist credentials in the existing Keychain Credential[] store
+    // Persist credentials in the existing credential store
     const parsed = new URL(endpoint);
     const credential = {
       url: endpoint,
@@ -311,7 +311,7 @@ router.post("/connections", async (req: any, res: any) => {
 
 /**
  * DELETE /connections/:cluster_id — Remove a connection.
- * Also removes the associated credential from the Keychain.
+ * Also removes the associated credential from the local credential store.
  */
 router.delete("/connections/:cluster_id", async (req: any, res: any) => {
   try {
@@ -347,7 +347,7 @@ router.post("/connections/:cluster_id/activate", async (req: any, res: any) => {
     if (!found) {
       return res.status(404).json({
         error:
-          "Credentials not found in keychain. Please re-add this connection.",
+          "Credentials not found in the local credential store. Please re-add this connection.",
       });
     }
     clickhouseKeychain.setActiveCredential(found);
