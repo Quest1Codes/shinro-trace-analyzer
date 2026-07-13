@@ -29,7 +29,14 @@ interface ConnectionContextValue {
   isConnected: boolean;
 
   // Actions
-  addConnection: (endpoint: string, userName: string, password: string, skipTest?: boolean) => Promise<{ success: boolean; error?: string }>;
+  addConnection: (
+    endpoint: string,
+    userName: string,
+    password: string,
+    skipTest?: boolean,
+    nativePort?: string,
+    nativeSecure?: boolean,
+  ) => Promise<{ success: boolean; error?: string }>;
   deleteConnection: (clusterId: string) => Promise<void>;
   selectConnection: (clusterId: string) => Promise<{ success: boolean; error?: string }>;
 
@@ -77,8 +84,22 @@ export function ConnectionProvider({ children }: { children: React.ReactNode }) 
   }, [connections, activeClusterId]);
 
   const addConnection = useCallback(
-    async (endpoint: string, userName: string, password: string, skipTest?: boolean) => {
-      const result = await addConnectionApi(endpoint, userName, password, skipTest);
+    async (
+      endpoint: string,
+      userName: string,
+      password: string,
+      skipTest?: boolean,
+      nativePort?: string,
+      nativeSecure?: boolean,
+    ) => {
+      const result = await addConnectionApi(
+        endpoint,
+        userName,
+        password,
+        skipTest,
+        nativePort,
+        nativeSecure,
+      );
       if (result.success) {
         await refreshConnections();
         // Auto-activate the newly added connection
