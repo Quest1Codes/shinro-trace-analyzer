@@ -7,6 +7,7 @@ import {
   executeQuery,
   querySystemTables,
   testConnection,
+  testNativeConnection,
   invalidateCHClient,
   validateQueryID,
 } from "./clickhouse";
@@ -283,24 +284,29 @@ router.post("/connections", async (req: any, res: any) => {
     if (!skipTest) {
       await testConnection(endpoint, user, pass);
     }
-    saveConnection(id, user, endpoint);
-    // Persist credentials in the existing credential store
     const parsed = new URL(endpoint);
-    const credential = {
+    const credentialNativePort =
+      typeof nativePort === "string" && nativePort
+        ? nativePort
+        : existingCredential?.nativePort;
+    const credentialNativeSecure =
+      typeof nativeSecure === "boolean"
+        ? nativeSecure
+        : existingCredential?.nativeSecure;
+    const credential: CHCredential = {
       url: endpoint,
       user,
       password: pass,
       port: parsed.port || undefined,
-      nativePort:
-        typeof nativePort === "string"
-          ? nativePort
-          : existingCredential?.nativePort,
-      nativeSecure:
-        typeof nativeSecure === "boolean"
-          ? nativeSecure
-          : existingCredential?.nativeSecure,
+      nativePort: credentialNativePort,
+      nativeSecure: credentialNativeSecure,
       secure: parsed.protocol === "https:",
     };
+    if (credentialNativePort) {
+      await testNativeConnection(credential);
+    }
+    saveConnection(id, user, endpoint);
+    // Persist credentials in the existing credential store
     await clickhouseKeychain.upsertCredential(credential);
     clickhouseKeychain.setActiveCredential(credential);
     return res.json({ success: true, cluster_id: id });
