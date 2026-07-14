@@ -228,7 +228,7 @@ export default function ConnectionSetup() {
       config.password,
       true,
       config.nativePort?.trim() || undefined,
-      config.nativeSecure || undefined,
+      config.nativeSecure ?? false,
     );
     if (!saveResult.success) {
       setTestStep('idle');
