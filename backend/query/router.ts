@@ -31,6 +31,19 @@ import {
 const router = express.Router();
 var queriesList: Array<string> = [];
 
+/**
+ * Validate an optional native TCP port. Returns true when the value is either
+ * absent or a numeric string representing a valid TCP port (1–65535).
+ */
+function isValidNativePort(value: unknown): boolean {
+  if (value == null || value === "") return true;
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return false;
+  const port = Number(trimmed);
+  return port >= 1 && port <= 65535;
+}
+
 async function updateQueriesList() {
   if (!fs.existsSync(LOG_DIR)) {
     fs.mkdirSync(LOG_DIR, { recursive: true });
@@ -93,6 +106,12 @@ router.post("/credentials", async (req: any, res: any) => {
     }
   } catch {
     return res.status(400).json({ error: "Invalid URL format" });
+  }
+
+  if (!isValidNativePort(nativePort)) {
+    return res
+      .status(400)
+      .json({ error: "Native port must be a number between 1 and 65535" });
   }
 
   const credential = {
@@ -264,6 +283,12 @@ router.post("/connections", async (req: any, res: any) => {
   } = req.body;
   if (!endpoint) {
     return res.status(400).json({ error: "endpoint is required" });
+  }
+
+  if (!isValidNativePort(nativePort)) {
+    return res
+      .status(400)
+      .json({ error: "Native port must be a number between 1 and 65535" });
   }
 
   const id =

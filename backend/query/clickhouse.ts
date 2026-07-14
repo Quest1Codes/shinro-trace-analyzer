@@ -154,7 +154,12 @@ async function runClientCommand(
 ): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
   if (!binaryPath) throw new Error("ClickHouse binary not configured");
 
-  const args = await buildClientArgs(query, credentials ?? undefined);
+  // Preserve an explicit `null` (no credentials); only fall back to the active
+  // credential when the caller omits the argument entirely (`undefined`).
+  const args =
+    credentials === undefined
+      ? await buildClientArgs(query)
+      : await buildClientArgs(query, credentials);
 
   const child = spawn(binaryPath, args, { stdio: ["pipe", "pipe", "pipe"] });
   // Close stdin so INSERT queries don't hang waiting for input

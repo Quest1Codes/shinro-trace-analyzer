@@ -128,12 +128,11 @@ export default function ConnectionSetup() {
 
   const deleteSavedCredential = async (cred: { url: string; user: string }, e: React.MouseEvent) => {
     e.stopPropagation();
-    const account = `${cred.user}@${cred.url}`;
     try {
       await fetch('/api/query/credentials', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account }),
+        body: JSON.stringify({ user: cred.user, url: cred.url }),
       });
       setSavedCredentials((prev) => prev.filter((c) => !(c.url === cred.url && c.user === cred.user)));
     } catch {
@@ -189,7 +188,7 @@ export default function ConnectionSetup() {
         user: config.user.trim(),
         password: config.password,
         nativePort: config.nativePort?.trim() || undefined,
-        nativeSecure: config.nativeSecure || undefined,
+        nativeSecure: config.nativeSecure ?? false,
       }),
     });
     const credData: { success?: boolean; error?: string } = await credRes.json();
@@ -221,10 +220,24 @@ export default function ConnectionSetup() {
     }
 
 
+    // Persist to SQLite so it appears in the connection dropdown (skip re-testing
+    // the HTTP connection; the backend still validates the native port if set).
+    const saveResult = await addConnection(
+      config.url.trim(),
+      config.user.trim(),
+      config.password,
+      true,
+      config.nativePort?.trim() || undefined,
+      config.nativeSecure || undefined,
+    );
+    if (!saveResult.success) {
+      setTestStep('idle');
+      setError(saveResult.error ?? 'Failed to save connection.');
+      return;
+    }
+
     setTestStep('idle');
     markConnected({ url: config.url.trim(), user: config.user.trim() });
-    // Persist to SQLite so it appears in the connection dropdown (skip re-testing)
-    addConnection(config.url.trim(), config.user.trim(), config.password, true).catch(() => { });
     navigate('/app');
   };
 
