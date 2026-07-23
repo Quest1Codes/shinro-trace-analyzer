@@ -494,8 +494,8 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
                           connUser.trim() || 'default',
                           connPassword,
                           undefined,
-                          connNativePort.trim() || undefined,
-                          connNativeSecure || undefined,
+                          connNativePort.trim(),
+                          connNativeSecure,
                         );
                         setConnAdding(false);
                         if (result.success) {

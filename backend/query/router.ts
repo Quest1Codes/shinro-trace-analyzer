@@ -311,8 +311,8 @@ router.post("/connections", async (req: any, res: any) => {
     }
     const parsed = new URL(endpoint);
     const credentialNativePort =
-      typeof nativePort === "string" && nativePort
-        ? nativePort
+      typeof nativePort === "string"
+        ? nativePort.trim() || undefined
         : existingCredential?.nativePort;
     const credentialNativeSecure =
       typeof nativeSecure === "boolean"
