@@ -96,7 +96,7 @@ export async function setBinaryPath(path: string): Promise<void> {
 }
 
 async function resolveHostname(hostname: string): Promise<string> {
-  // macOS mDNS .local hostnames are not resolvable by the ClickHouse binary.
+  // Some .local hostnames are not resolvable by the ClickHouse binary.
   // Use the OS resolver (which supports mDNS) to get the actual IP.
   if (hostname.endsWith(".local")) {
     try {
@@ -109,18 +109,22 @@ async function resolveHostname(hostname: string): Promise<string> {
   return hostname;
 }
 
-async function buildClientArgs(query: string): Promise<string[]> {
+async function buildClientArgs(
+  query: string,
+  credentials: CHCredential | null = clickhouseKeychain.getActiveCredential(),
+): Promise<string[]> {
   const args = ["client"];
-  const credentials = clickhouseKeychain.getActiveCredential();
   if (credentials) {
     const parsed = new URL(credentials.url);
     const hostname = await resolveHostname(parsed.hostname);
     args.push("--host", hostname);
 
     const httpPort = credentials.port || parsed.port;
-    const mapped = httpPort ? HTTP_TO_NATIVE_PORT[httpPort] : undefined;
-
-    if (mapped) {
+    if (credentials.nativePort?.trim()) {
+      args.push("--port", credentials.nativePort.trim());
+      if (credentials.nativeSecure === true) args.push("--secure");
+    } else if (httpPort && HTTP_TO_NATIVE_PORT[httpPort]) {
+      const mapped = HTTP_TO_NATIVE_PORT[httpPort];
       args.push("--port", mapped.port);
       if (mapped.secure) args.push("--secure");
     } else if (httpPort) {
@@ -144,12 +148,18 @@ async function buildClientArgs(query: string): Promise<string[]> {
   return args;
 }
 
-export async function executeQuery(query: string): Promise<string> {
-  // Returns query ID if successful, throws an error if execution fails.
-
+async function runClientCommand(
+  query: string,
+  credentials?: CHCredential | null,
+): Promise<{ stdout: string; stderr: string; exitCode: number | null }> {
   if (!binaryPath) throw new Error("ClickHouse binary not configured");
 
-  const args = await buildClientArgs(query);
+  // Preserve an explicit `null` (no credentials); only fall back to the active
+  // credential when the caller omits the argument entirely (`undefined`).
+  const args =
+    credentials === undefined
+      ? await buildClientArgs(query)
+      : await buildClientArgs(query, credentials);
 
   const child = spawn(binaryPath, args, { stdio: ["pipe", "pipe", "pipe"] });
   // Close stdin so INSERT queries don't hang waiting for input
@@ -180,6 +190,14 @@ export async function executeQuery(query: string): Promise<string> {
     });
   });
 
+  return { stdout, stderr, exitCode };
+}
+
+export async function executeQuery(query: string): Promise<string> {
+  // Returns query ID if successful, throws an error if execution fails.
+
+  const { stdout, stderr, exitCode } = await runClientCommand(query);
+
   if (exitCode !== 0) {
     throw new Error(stderr || stdout || `Process exited with code ${exitCode}`);
   }
@@ -196,6 +214,19 @@ export async function executeQuery(query: string): Promise<string> {
   const finalTracePath = getTracePath(queryID, true)!;
   await writeFile(finalTracePath, stderr);
   return queryID;
+}
+
+export async function testNativeConnection(
+  credentials: CHCredential,
+): Promise<void> {
+  const { stdout, stderr, exitCode } = await runClientCommand(
+    "SELECT 1",
+    credentials,
+  );
+
+  if (exitCode !== 0) {
+    throw new Error(stderr || stdout || `Process exited with code ${exitCode}`);
+  }
 }
 
 // ─── Singleton ClickHouse JS client ─────────────────────

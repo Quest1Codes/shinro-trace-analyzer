@@ -28,6 +28,8 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
   const [connEndpoint, setConnEndpoint] = useState('http://localhost:8123');
   const [connUser, setConnUser] = useState('default');
   const [connPassword, setConnPassword] = useState('');
+  const [connNativePort, setConnNativePort] = useState('');
+  const [connNativeSecure, setConnNativeSecure] = useState(false);
   const [connBinaryPath, setConnBinaryPath] = useState('');
   const [connBinaryStatus, setConnBinaryStatus] = useState<'checking' | 'found' | 'not_found' | 'error'>('checking');
   const [connBinaryDetected, setConnBinaryDetected] = useState('');
@@ -149,6 +151,15 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
     }
   }
 
+  function resetConnectionForm() {
+    setShowAddForm(false);
+    setConnEndpoint('http://localhost:8123');
+    setConnUser('default');
+    setConnPassword('');
+    setConnNativePort('');
+    setConnNativeSecure(false);
+  }
+
   async function handleDelete(provider: 'openai' | 'anthropic' | 'openrouter') {
     try {
       await deleteProviderKeyConfig(provider);
@@ -227,7 +238,7 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
                   <rect x="3" y="8" width="12" height="9" rx="1.5" stroke="currentColor" strokeWidth="1.2" />
                   <path d="M6 8V5.5a3 3 0 0 1 6 0V8" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" />
                 </svg>
-                <p>Keys are encrypted and stored locally in <code>macOS keychain</code>.</p>
+                <p>Keys are stored locally using the system credential store.</p>
               </div>
 
 
@@ -459,17 +470,36 @@ export default function Settings({ initialTab, hideTabs, onClose }: SettingsProp
                       <label className="label-muted">Password</label>
                       <input className="input-field" type="password" value={connPassword} onChange={(e) => setConnPassword(e.target.value)} placeholder="(optional)" />
                     </div>
+                    <div className="key-field">
+                      <label className="label-muted">Native TCP Port</label>
+                      <input className="input-field" value={connNativePort} onChange={(e) => setConnNativePort(e.target.value)} placeholder="9000 (optional)" />
+                    </div>
+                    <div className="key-field">
+                      <label className="label-muted">Native TLS</label>
+                      <label style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-secondary)' }}>
+                        <input
+                          type="checkbox"
+                          checked={connNativeSecure}
+                          onChange={(e) => setConnNativeSecure(e.target.checked)}
+                        />
+                        <span>Use TLS for native TCP</span>
+                      </label>
+                    </div>
                     <div className="panel-actions" style={{ marginTop: 12 }}>
-                      <button className="btn-secondary" onClick={() => { setShowAddForm(false); setConnEndpoint('http://localhost:8123'); setConnUser('default'); setConnPassword(''); }}>Cancel</button>
+                      <button className="btn-secondary" onClick={resetConnectionForm}>Cancel</button>
                       <button className="btn-primary" disabled={connAdding || !connEndpoint.trim()} onClick={async () => {
                         setConnAdding(true);
-                        const result = await addConnection(connEndpoint.trim(), connUser.trim() || 'default', connPassword);
+                        const result = await addConnection(
+                          connEndpoint.trim(),
+                          connUser.trim() || 'default',
+                          connPassword,
+                          undefined,
+                          connNativePort.trim(),
+                          connNativeSecure,
+                        );
                         setConnAdding(false);
                         if (result.success) {
-                          setShowAddForm(false);
-                          setConnEndpoint('http://localhost:8123');
-                          setConnUser('default');
-                          setConnPassword('');
+                          resetConnectionForm();
                           setSaveResult({ type: 'success', message: 'Connection added and verified!' });
                         } else {
                           setSaveResult({ type: 'error', message: result.error || 'Connection failed' });

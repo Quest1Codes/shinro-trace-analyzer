@@ -7,6 +7,7 @@ import {
   executeQuery,
   querySystemTables,
   testConnection,
+  testNativeConnection,
   invalidateCHClient,
   validateQueryID,
 } from "./clickhouse";
@@ -29,6 +30,19 @@ import {
 
 const router = express.Router();
 var queriesList: Array<string> = [];
+
+/**
+ * Validate an optional native TCP port. Returns true when the value is either
+ * absent or a numeric string representing a valid TCP port (1–65535).
+ */
+function isValidNativePort(value: unknown): boolean {
+  if (value == null || value === "") return true;
+  if (typeof value !== "string") return false;
+  const trimmed = value.trim();
+  if (!/^\d+$/.test(trimmed)) return false;
+  const port = Number(trimmed);
+  return port >= 1 && port <= 65535;
+}
 
 async function updateQueriesList() {
   if (!fs.existsSync(LOG_DIR)) {
@@ -77,7 +91,7 @@ router.get("/credentials", async (_req: any, res: any) => {
 });
 
 router.post("/credentials", async (req: any, res: any) => {
-  const { url, user, password, port, secure } = req.body;
+  const { url, user, password, port, secure, nativePort, nativeSecure } = req.body;
   if (!url || typeof url !== "string") {
     return res.status(400).json({ error: "url is required" });
   }
@@ -94,11 +108,19 @@ router.post("/credentials", async (req: any, res: any) => {
     return res.status(400).json({ error: "Invalid URL format" });
   }
 
+  if (!isValidNativePort(nativePort)) {
+    return res
+      .status(400)
+      .json({ error: "Native port must be a number between 1 and 65535" });
+  }
+
   const credential = {
     url,
     user: typeof user === "string" && user ? user : "default",
     password: typeof password === "string" ? password : "",
     port: typeof port === "string" ? port : parsed.port || undefined,
+    nativePort: typeof nativePort === "string" && nativePort ? nativePort : undefined,
+    nativeSecure: typeof nativeSecure === "boolean" ? nativeSecure : undefined,
     secure: typeof secure === "boolean" ? secure : parsed.protocol === "https:",
   } as CHCredential;
 
@@ -247,12 +269,26 @@ router.get("/connections/all", (_req: any, res: any) => {
 /**
  * POST /connections — Save a new connection.
  * Body: { cluster_id?, user_name, endpoint, password, skipTest? }
- * Password is stored in the macOS Keychain.
+ * Password is stored in the local credential store.
  */
 router.post("/connections", async (req: any, res: any) => {
-  const { cluster_id, user_name, endpoint, password, skipTest } = req.body;
+  const {
+    cluster_id,
+    user_name,
+    endpoint,
+    password,
+    skipTest,
+    nativePort,
+    nativeSecure,
+  } = req.body;
   if (!endpoint) {
     return res.status(400).json({ error: "endpoint is required" });
+  }
+
+  if (!isValidNativePort(nativePort)) {
+    return res
+      .status(400)
+      .json({ error: "Native port must be a number between 1 and 65535" });
   }
 
   const id =
@@ -265,20 +301,37 @@ router.post("/connections", async (req: any, res: any) => {
   try {
     const user = user_name || "default";
     const pass = password || "";
+    const existingCredential = await clickhouseKeychain.getCredentialFor(
+      user,
+      endpoint,
+    );
     // Test connection before saving (unless caller already validated)
     if (!skipTest) {
       await testConnection(endpoint, user, pass);
     }
-    saveConnection(id, user, endpoint);
-    // Persist credentials in the existing Keychain Credential[] store
     const parsed = new URL(endpoint);
-    const credential = {
+    const credentialNativePort =
+      typeof nativePort === "string"
+        ? nativePort.trim() || undefined
+        : existingCredential?.nativePort;
+    const credentialNativeSecure =
+      typeof nativeSecure === "boolean"
+        ? nativeSecure
+        : existingCredential?.nativeSecure;
+    const credential: CHCredential = {
       url: endpoint,
       user,
       password: pass,
       port: parsed.port || undefined,
+      nativePort: credentialNativePort,
+      nativeSecure: credentialNativeSecure,
       secure: parsed.protocol === "https:",
     };
+    if (credentialNativePort) {
+      await testNativeConnection(credential);
+    }
+    saveConnection(id, user, endpoint);
+    // Persist credentials in the existing credential store
     await clickhouseKeychain.upsertCredential(credential);
     clickhouseKeychain.setActiveCredential(credential);
     return res.json({ success: true, cluster_id: id });
@@ -289,7 +342,7 @@ router.post("/connections", async (req: any, res: any) => {
 
 /**
  * DELETE /connections/:cluster_id — Remove a connection.
- * Also removes the associated credential from the Keychain.
+ * Also removes the associated credential from the local credential store.
  */
 router.delete("/connections/:cluster_id", async (req: any, res: any) => {
   try {
@@ -325,7 +378,7 @@ router.post("/connections/:cluster_id/activate", async (req: any, res: any) => {
     if (!found) {
       return res.status(404).json({
         error:
-          "Credentials not found in keychain. Please re-add this connection.",
+          "Credentials not found in the local credential store. Please re-add this connection.",
       });
     }
     clickhouseKeychain.setActiveCredential(found);

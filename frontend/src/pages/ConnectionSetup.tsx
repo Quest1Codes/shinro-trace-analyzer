@@ -7,6 +7,21 @@ import Quest1Logo from '../components/Quest1Logo';
 import Quest1LogoMark from '../components/Quest1LogoMark';
 import './ConnectionSetup.css';
 
+type SavedCredential = {
+  url: string;
+  user: string;
+  password: string;
+  secure: boolean;
+  nativePort?: string;
+  nativeSecure?: boolean;
+};
+
+type CredentialsResponse = {
+  configured: boolean;
+  active?: SavedCredential | null;
+  saved?: SavedCredential[];
+};
+
 type BinaryStatus =
   | { state: 'checking' }
   | { state: 'found'; path: string }
@@ -28,12 +43,14 @@ export default function ConnectionSetup() {
     url: 'http://localhost:8123',
     user: 'default',
     password: '',
+    nativePort: '',
+    nativeSecure: false,
   });
   const [binaryPath, setBinaryPath] = useState('');
   const [binaryStatus, setBinaryStatus] = useState<BinaryStatus>({ state: 'checking' });
   const [testStep, setTestStep] = useState<TestStep>('idle');
   const [error, setError] = useState<string | null>(null);
-  const [savedCredentials, setSavedCredentials] = useState<Array<{ url: string; user: string; password: string; secure: boolean }>>([]);
+  const [savedCredentials, setSavedCredentials] = useState<SavedCredential[]>([]);
   const [showSavedDropdown, setShowSavedDropdown] = useState(false);
 
 
@@ -53,11 +70,7 @@ export default function ConnectionSetup() {
 
     fetch('/api/query/credentials')
       .then((r) => r.json())
-      .then((data: {
-        configured: boolean;
-        active?: { url: string; user: string; password: string; secure: boolean } | null;
-        saved?: Array<{ url: string; user: string; password: string; secure: boolean }>;
-      }) => {
+      .then((data: CredentialsResponse) => {
         if (data.saved && data.saved.length > 0) {
           setSavedCredentials(data.saved);
         }
@@ -67,11 +80,19 @@ export default function ConnectionSetup() {
             url: data.active!.url,
             user: data.active!.user,
             password: data.active!.password ?? prev.password,
+            nativePort: data.active!.nativePort ?? prev.nativePort ?? '',
+            nativeSecure: data.active!.nativeSecure ?? prev.nativeSecure ?? false,
           }));
         } else if (data.saved && data.saved.length > 0) {
           // No active credential but saved ones exist — auto-fill the first
           const first = data.saved[0];
-          setConfig({ url: first.url, user: first.user, password: first.password });
+          setConfig({
+            url: first.url,
+            user: first.user,
+            password: first.password,
+            nativePort: first.nativePort ?? '',
+            nativeSecure: first.nativeSecure ?? false,
+          });
         }
       })
       .catch(() => { });
@@ -93,20 +114,25 @@ export default function ConnectionSetup() {
 
   const isBusy = testStep !== 'idle';
 
-  const selectSavedCredential = (cred: { url: string; user: string; password: string }) => {
-    setConfig({ url: cred.url, user: cred.user, password: cred.password });
+  const selectSavedCredential = (cred: SavedCredential) => {
+    setConfig({
+      url: cred.url,
+      user: cred.user,
+      password: cred.password,
+      nativePort: cred.nativePort ?? '',
+      nativeSecure: cred.nativeSecure ?? false,
+    });
     setShowSavedDropdown(false);
     if (error) setError(null);
   };
 
   const deleteSavedCredential = async (cred: { url: string; user: string }, e: React.MouseEvent) => {
     e.stopPropagation();
-    const account = `${cred.user}@${cred.url}`;
     try {
       await fetch('/api/query/credentials', {
         method: 'DELETE',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ account }),
+        body: JSON.stringify({ user: cred.user, url: cred.url }),
       });
       setSavedCredentials((prev) => prev.filter((c) => !(c.url === cred.url && c.user === cred.user)));
     } catch {
@@ -161,6 +187,8 @@ export default function ConnectionSetup() {
         url: config.url.trim(),
         user: config.user.trim(),
         password: config.password,
+        nativePort: config.nativePort?.trim() || undefined,
+        nativeSecure: config.nativeSecure ?? false,
       }),
     });
     const credData: { success?: boolean; error?: string } = await credRes.json();
@@ -192,10 +220,24 @@ export default function ConnectionSetup() {
     }
 
 
+    // Persist to SQLite so it appears in the connection dropdown (skip re-testing
+    // the HTTP connection; the backend still validates the native port if set).
+    const saveResult = await addConnection(
+      config.url.trim(),
+      config.user.trim(),
+      config.password,
+      true,
+      config.nativePort?.trim() || undefined,
+      config.nativeSecure ?? false,
+    );
+    if (!saveResult.success) {
+      setTestStep('idle');
+      setError(saveResult.error ?? 'Failed to save connection.');
+      return;
+    }
+
     setTestStep('idle');
     markConnected({ url: config.url.trim(), user: config.user.trim() });
-    // Persist to SQLite so it appears in the connection dropdown (skip re-testing)
-    addConnection(config.url.trim(), config.user.trim(), config.password, true).catch(() => { });
     navigate('/app');
   };
 
@@ -252,7 +294,7 @@ export default function ConnectionSetup() {
                     const match = savedCredentials.find((c) => c.url === config.url && c.user === config.user);
                     if (match) {
                       let host = match.url;
-                      try { host = new URL(match.url).hostname; } catch { }
+                      try { host = new URL(match.url).hostname; } catch (error) { void error; }
                       return <><span className="saved-cred-user">{match.user}</span><span className="saved-cred-at">@</span><span className="saved-cred-host">{host}</span></>;
                     }
                     return <span className="saved-cred-placeholder">Select a saved connection…</span>;
@@ -267,7 +309,7 @@ export default function ConnectionSetup() {
                   {savedCredentials.map((cred) => {
                     const isSelected = config.url === cred.url && config.user === cred.user;
                     let displayHost = cred.url;
-                    try { displayHost = new URL(cred.url).hostname; } catch { }
+                    try { displayHost = new URL(cred.url).hostname; } catch (error) { void error; }
                     return (
                       <div
                         key={`${cred.user}@${cred.url}`}
@@ -337,6 +379,35 @@ export default function ConnectionSetup() {
               disabled={isBusy}
               autoComplete="off"
             />
+          </div>
+        </div>
+
+        <div className="form-row">
+          <div className="form-group flex-1">
+            <label className="field-label">NATIVE TCP PORT</label>
+            <input
+              className="input-field"
+              value={config.nativePort ?? ''}
+              onChange={handleConfigChange('nativePort')}
+              placeholder="9000 (optional)"
+              disabled={isBusy}
+              autoComplete="off"
+            />
+          </div>
+          <div className="form-group flex-1">
+            <label className="field-label">NATIVE TLS</label>
+            <div className="input-field" style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+              <input
+                type="checkbox"
+                checked={config.nativeSecure ?? false}
+                onChange={(e) => {
+                  setConfig((prev) => ({ ...prev, nativeSecure: e.target.checked }));
+                  if (error) setError(null);
+                }}
+                disabled={isBusy}
+              />
+              <span>Use TLS for native TCP</span>
+            </div>
           </div>
         </div>
 
@@ -419,7 +490,7 @@ export default function ConnectionSetup() {
 
         <div className="connection-footer">
           <span className="credentials-note">
-            <span className="dot dot-amber" /> CREDENTIALS STORED USING KEYCHAIN
+            <span className="dot dot-amber" /> CREDENTIALS STORED LOCALLY
           </span>
           <div className="footer-icons">
             <div className="help-popover-wrap">
@@ -433,7 +504,7 @@ export default function ConnectionSetup() {
               <div className="help-popover">
                 <p className="help-popover-title">Local Storage</p>
                 <ul className="help-popover-list">
-                  <li><strong>Credentials</strong> (URL, user, password) are stored securely in the macOS Keychain</li>
+                  <li><strong>Credentials</strong> (URL, user, password) are stored securely using the system credential store</li>
                   <li><strong>Trace logs</strong> and parsed results are written to <code>~/.shinro/</code> during each query run</li>
                 </ul>
                 <p className="help-popover-note">Nothing leaves your machine.</p>

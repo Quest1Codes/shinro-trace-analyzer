@@ -5,6 +5,8 @@ export interface CHCredential {
   user: string;
   password: string;
   port?: string;
+  nativePort?: string;
+  nativeSecure?: boolean;
   secure: boolean;
 }
 

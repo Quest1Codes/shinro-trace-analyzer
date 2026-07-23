@@ -45,11 +45,20 @@ export async function addConnection(
   user_name: string,
   password: string,
   skipTest?: boolean,
+  nativePort?: string,
+  nativeSecure?: boolean,
 ): Promise<{ success: boolean; cluster_id?: string; error?: string }> {
   const res = await fetch(`${API_BASE}/connections`, {
     method: 'POST',
     headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ user_name, endpoint, password, skipTest }),
+    body: JSON.stringify({
+      user_name,
+      endpoint,
+      password,
+      skipTest,
+      nativePort,
+      nativeSecure,
+    }),
   });
   const data = await res.json();
   if (!res.ok) return { success: false, error: data.error || 'Failed to add connection' };

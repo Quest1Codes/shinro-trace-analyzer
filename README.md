@@ -4,12 +4,12 @@ Diagnose Clickhouse queries for bottlenecks and performance improvements. It aut
 
 Also supports more dynamic analysis and natural-language conversations with an LLM of your choice .
 
-Supported on macOS, with other platforms arriving soon.
+Supported on macOS and Linux.
 
 ## Requirements
 | Kind              | Supported                                                              |
 |-------------------|------------------------------------------------------------------------|
-| OS                | macOS **13** (Ventura) and later, macOS **15** (Sequoia)+ recommended. |
+| OS                | macOS **13** (Ventura)+ or Linux with a supported desktop browser and system keyring |
 | Clickhouse Server | Local and Cloud deployments - **v25, v26**                             |
 | Query Types       | INSERT, SELECT                                                         |
 | LLM Provider      | OpenAI, Anthropic, OpenRouter                                          |
@@ -17,22 +17,20 @@ Supported on macOS, with other platforms arriving soon.
 ## Quickstart
 
 - Download the tool from the [Releases page](https://github.com/Quest1Codes/shinro-trace-analyzer/releases)
-- Make the tool accessible - Can be done in two ways. You can either:
-  1. Add execution permissions to the downloaded file.
-      ```shell
-      # Grant execute permission
-      chmod +x shinro-analyzer-macos-arm64
-      # Remove quarantine flag
-      xattr -d com.apple.quarantine shinro-analyzer-macos-arm64
-      ```
-  2. Or, approve execution from Settings:
-      - Double-click the executable to open it. If this is the first time of running, you will be shown a warning about potential privacy issues.
-      - Click on **Done**.
-      - Open Settings -> Privacy and Security -> Scroll down to find the entry for the tool, and click on **Open Anyway**. Follow the prompts.
+- Make the downloaded binary executable.
+  ```shell
+  chmod +x ./shinro-analyzer-<platform>-<arch>
+  ```
+- On macOS, if Gatekeeper blocks the app on first launch, remove the quarantine flag or approve execution from **Settings → Privacy & Security**.
+  ```shell
+  xattr -d com.apple.quarantine ./shinro-analyzer-macos-arm64
+  ```
 - The app opens, and a WebUI is available at [http://localhost:13000](http://localhost:13000) by default.
+- Credentials are stored locally using the system credential store through `@napi-rs/keyring`.
+- On headless Linux environments or WSL, browser launch and keyring support may require additional desktop/keyring setup.
 - The port used by the app is configurable as follows.
   ```shell
-  ./shinro-analyzer-macos-arm64 --port=13001
+  ./shinro-analyzer-<platform>-<arch> --port=13001
   ```
 
 ## Demo & Screenshots
@@ -78,7 +76,7 @@ Supported on macOS, with other platforms arriving soon.
 - Prerequisite: Bun v1.3.13+. v1.3.12 has [a bug](https://github.com/oven-sh/bun/discussions/29151) that kills the built executable upon launch. Instructions on how to (re)install a specific version of Bun are [here](https://bun.com/docs/installation#installing-older-versions).
 - Clone the repository, `cd` into the project directory.
 - Run `bun install` to install dependencies.
-- Run `bun build.ts` to build the frontend, and bundle the application into an executable. The built executable is present as `shinro-analyzer-macos-arm64` or `shinro-analyzer-macos-x86_64` in the same directory.
+- Run `bun build.ts` to build the frontend, and bundle the application into an executable. The built executable is present as `shinro-analyzer-macos-arm64`, `shinro-analyzer-macos-x86_64`, `shinro-analyzer-linux-arm64`, or `shinro-analyzer-linux-x86_64` in the same directory depending on the build host.
 
 ## Testing
 
@@ -88,20 +86,20 @@ The project includes a comprehensive unit test suite for backend components usin
 
 ```bash
 # Run all tests
-npm test
+bun run test
 
 # Run tests with coverage report
-npm run test:coverage
+bun run test:coverage
 
 # Run tests in watch mode
-npm run test:watch
+bun run test:watch
 ```
 
 ### Test Coverage
 
-- **Parser Logic**: 40 tests covering trace parsing, metadata extraction, table I/O stats, memory tracking, and materialized view analysis
-- **Helper Functions**: 18 tests covering file system operations and path management
-- **Overall Coverage**: 94.11% statements, 79.25% branches, 100% functions, 94.87% lines
+- **Parser Logic**: 41 tests covering trace parsing, metadata extraction, table I/O stats, memory tracking, and materialized view analysis
+- **Helpers and Platform Compatibility**: 25 tests covering file system operations, browser launch behavior, and cross-platform credential storage
+- **Overall Coverage**: 95.14% statements, 83.67% branches, 94.11% functions, 95.83% lines
 
 ### Test Design
 
