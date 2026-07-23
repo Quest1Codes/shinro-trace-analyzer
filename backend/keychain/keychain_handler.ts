@@ -45,6 +45,7 @@ export class KeychainHandler<T> {
     }
 
     let value: T | undefined;
+    let readSucceeded = true;
 
     try {
       const raw = await this.entry.getPassword();
@@ -53,11 +54,15 @@ export class KeychainHandler<T> {
         value = blob.data;
       }
     } catch {
+      readSucceeded = false;
       value = undefined;
     }
 
-    this.cache = value ?? null;
-    this.hasCache = true;
+    // Only cache successful reads; a transient failure should be retried next time.
+    if (readSucceeded) {
+      this.cache = value ?? null;
+      this.hasCache = true;
+    }
     return value == null ? undefined : structuredClone(value);
   }
 
